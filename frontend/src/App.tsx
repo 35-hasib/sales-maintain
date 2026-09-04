@@ -2,7 +2,6 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import type { ReactElement } from "react";
 import { useAuth } from "./context/AuthContext";
 import Layout from "./components/Layout";
-import LoadingOverlay from "./components/LoadingOverlay";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Dealers from "./pages/Dealers";
@@ -29,10 +28,8 @@ function OfficerOnly({ children }: { children: ReactElement }) {
 
 export default function App() {
   return (
-    <>
-      <LoadingOverlay />
-      <Routes>
-        <Route path="/login" element={<Login />} />
+    <Routes>
+      <Route path="/login" element={<Login />} />
       <Route
         element={
           <RequireAuth>
@@ -106,7 +103,6 @@ export default function App() {
         }
       />
     </Routes>
-    </>
   );
 }
 
