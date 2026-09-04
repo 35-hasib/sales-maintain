@@ -42,16 +42,16 @@ async function main() {
 
   const [d1, d2, d3, d4] = await Promise.all([
     prisma.dealer.create({
-      data: { name: "Alauddin Agro Traders", phone: "0171-1111111", address: "Dhaka", notes: "Rice & pulses wholesaler" },
+      data: { ownerOfficer: admin.id, name: "Alauddin Agro Traders", phone: "0171-1111111", address: "Dhaka", notes: "Rice & pulses wholesaler" },
     }),
     prisma.dealer.create({
-      data: { name: "Sobhan Rice Mills", phone: "0172-2222222", address: "Narayanganj", notes: "Rice mill owner" },
+      data: { ownerOfficer: admin.id, name: "Sobhan Rice Mills", phone: "0172-2222222", address: "Narayanganj", notes: "Rice mill owner" },
     }),
     prisma.dealer.create({
-      data: { name: "Karim General Store", phone: "0181-3333333", address: "Chittagong", notes: "General merchant" },
+      data: { ownerOfficer: admin.id, name: "Karim General Store", phone: "0181-3333333", address: "Chittagong", notes: "General merchant" },
     }),
     prisma.dealer.create({
-      data: { name: "Fertilizer Supply Co.", phone: "0191-4444444", address: "Comilla", notes: "Fertilizer supplier" },
+      data: { ownerOfficer: admin.id, name: "Fertilizer Supply Co.", phone: "0191-4444444", address: "Comilla", notes: "Fertilizer supplier" },
     }),
   ]);
 
