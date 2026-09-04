@@ -3,7 +3,13 @@
   "buildCommand": "cd frontend && npm install && npm run build",
   "outputDirectory": "frontend/dist",
   "framework": "vite",
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 10
+    }
+  },
   "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/index.js" },
     { "source": "/((?!api|assets/).*)", "destination": "/index.html" }
   ]
 }
