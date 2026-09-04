@@ -113,102 +113,86 @@ npm run dev           # starts API (:4000) and web (:5173) together
 | Service | Platform | URL example |
 |---------|----------|-------------|
 | Database | Neon (free Postgres) | `postgresql://...@ep-xxx.aws.neon.tech/salesmaintain` |
-| Backend API | Render (Web Service) | `https://salesmaintain-api.onrender.com` |
-| Frontend (web) | Vercel | `https://salesmaintain.vercel.app` |
+| Backend API | Vercel (serverless function) | `https://salesmaintain.vercel.app/api/...` |
+| Frontend (web) | Vercel (static) | `https://salesmaintain.vercel.app` |
 | Frontend (mobile) | Google Play (EAS Build) | `com.salesmaintain.mobile` |
 
 ```
-┌──────────┐       VITE_API_BASE        ┌──────────────┐      DATABASE_URL     ┌────────────┐
-│  Vercel  │ ────── (absolute URL) ──── │   Render     │ ──── (external) ──── │   Neon     │
-│ Frontend │                            │   Backend    │                       │ PostgreSQL │
-└──────────┘                            └──────────────┘                       └────────────┘
+┌───────────────────────┐      DATABASE_URL     ┌────────────┐
+│        Vercel         │ ──────── (external) ──│    Neon    │
+│ ┌───────┐  ┌────────┐ │                       │ PostgreSQL │
+│ │  Web  │  │  API   │ │                       └────────────┘
+│ │ app   │  │(server)│ │
+│ └───────┘  └────────┘ │
+└───────────────────────┘
 ```
 
-> **Free with no payment info:** Neon gives a free Postgres (no card), Render's free web
-> service needs no card, and Vercel is free. Only the Google Play account ($25 one-time) costs money.
+> **100% free, no payment info anywhere:** Neon gives free Postgres (no card), Vercel hosts both
+> the web app and the API serverless function (no card). Only the Google Play account ($25 one-time) costs money.
 
-## Deploying the backend to Render (free, no payment info)
+## Deploying everything to Vercel (backend + frontend, free)
 
-The project includes a `render.yaml` blueprint that provisions the backend API only.
-**PostgreSQL runs on Neon** (free tier — Render no longer offers free managed Postgres).
+Both the frontend and backend deploy from the **same repo** to the **same Vercel project**,
+so the web app and API share one domain (`https://salesmaintain.vercel.app`). No CORS setup needed.
 
 ### Step 1 — Create a free PostgreSQL on Neon
 
 1. Go to [neon.tech](https://neon.tech) → **Sign up** → **Create project** (no card needed).
 2. Choose region **Singapore** (closest to Bangladesh) → make sure **Postgres 16** is selected.
-3. Copy the **connection string** (the `postgresql://...` URL) — save it for later.
+3. Copy the **pooled connection string** (like `postgresql://...-pooler.aws.neon.tech/salesmaintain`) — save it for later.
 
-### Step 2 — Deploy the backend on Render
+### Step 2 — Deploy on Vercel
 
-1. **Push the repo to GitHub** (make sure `render.yaml` is at the repo root).
+1. **Push the repo to GitHub** (make sure `api/index.js` and `vercel.json` are at the repo root).
 
-2. On [render.com](https://render.com), click **New** → **Blueprint** and select your repo.
-   Render reads `render.yaml` and creates the backend web service.
+2. On [vercel.com](https://vercel.com), click **Add New** → **Project** and import the repo.
 
-3. **Set environment variables** in the Render dashboard after provisioning:
+3. In **Settings → Environment Variables**, add (all applied to **Production**):
 
    | Variable | Value |
    |----------|-------|
-   | `DATABASE_URL` | Your **Neon** connection string |
-   | `JWT_SECRET` | Auto-generated (or set your own) |
+   | `DATABASE_URL` | Your **Neon** pooled connection string |
+   | `JWT_SECRET` | A long random string |
    | `JWT_EXPIRES_IN` | `7d` (default) |
-   | `CORS_ORIGIN` | Your Vercel frontend URL, e.g. `https://salesmaintain.vercel.app` |
+   | `CORS_ORIGIN` | Leave empty (same-origin in production) |
    | `CLOUDINARY_CLOUD_NAME` | Your Cloudinary cloud name |
    | `CLOUDINARY_API_KEY` | Your Cloudinary API key |
    | `CLOUDINARY_API_SECRET` | Your Cloudinary API secret |
 
-4. **Deploy** — Render auto-deploys on push. On first deploy the backend runs:
-   - `npm install && npx prisma generate` (build step)
-   - `npx prisma migrate deploy && node src/server.js` (start step)
+   > Do **not** set `VITE_API_BASE` — the frontend calls `/api` on the same domain.
 
-5. **Seed the database** (optional) — open a Render shell on `salesmaintain-api` and run:
-   ```bash
-   node prisma/seed.js
-   ```
+4. Click **Deploy**. `vercel.json` handles everything:
+   - installs backend deps and runs `prisma generate` (install step)
+   - builds the frontend into `frontend/dist` (build step)
+   - serves `/api/*` through `api/index.js` (serverless Express) 
+   - rewrites other routes to `index.html` (React Router)
 
-6. After the backend is live, copy its URL (e.g. `https://salesmaintain-api.onrender.com`) — you'll
-   need it when deploying the frontend on Vercel.
+### Step 3 — Run database migrations once
 
-### How it works
+Vercel has no "start" step, so migrations run once from your computer:
 
-- `VITE_API_BASE` is baked into the JS bundle at build time — it must be set **before** deploying.
-- Locally, `VITE_API_BASE` is empty and Vite's dev proxy handles routing.
-- CORS is configured via `CORS_ORIGIN` on the backend — set it to your Vercel frontend URL.
+```bash
+cd backend
+DATABASE_URL="<your-neon-pooled-url>" npx prisma migrate deploy
+DATABASE_URL="<your-neon-pooled-url>" npx prisma db seed
+```
 
-## Deploying the frontend to Vercel
+> **Why pooled (PGBouncer):** serverless functions open many short-lived connections.
+> Use Neon's **pooled** connection string so Prisma doesn't exhaust the DB's connection limit.
 
-A `vercel.json` at the repo root configures the build. The backend must already be deployed on Render.
+After that, open `https://salesmaintain.vercel.app` and log in with the seeded admin account.
 
-### Steps
+### Verifying the API
 
-1. Push the repo to GitHub.
-
-2. On [vercel.com](https://vercel.com), click **Add New** → **Project** and import the repo.
-
-3. In **Configure Project**, set:
-   - **Root Directory** → leave blank (repo root; `vercel.json` points into `frontend/`)
-   - **Build Command** → `cd frontend && npm install && npm run build` (already in `vercel.json`)
-   - **Output Directory** → `frontend/dist` (already in `vercel.json`)
-
-4. Add **Environment Variable**:
-
-   | Variable | Value |
-   |----------|-------|
-   | `VITE_API_BASE` | Your Render backend URL, e.g. `https://salesmaintain-api.onrender.com` |
-
-5. **Deploy**. Vercel builds and serves the SPA. Client-side routes (React Router) work
-   via the rewrite rule in `vercel.json`.
-
-6. After deploy, copy the Vercel frontend URL and update `CORS_ORIGIN` on the Render backend
-   so the API allows requests from the Vercel domain.
+- `https://salesmaintain.vercel.app/api/health` → `{ "ok": true }`
+- Dashboard at `https://salesmaintain.vercel.app/api/dashboard`
 
 ### How it works
 
-- `vercel.json` sets `buildCommand`, `outputDirectory`, and a catch-all rewrite to
-  `index.html` so React Router handles all client routes.
-- `VITE_API_BASE` is baked into the JS bundle at build time — it must be set in Vercel's
-  env vars **before** deploying.
-- The backend must have `CORS_ORIGIN` set to the Vercel domain (e.g. `https://salesmaintain.vercel.app`).
+- `api/index.js` imports `createApp()` from the backend and exposes it as a Vercel serverless function.
+- The frontend's `VITE_API_BASE` stays **empty** → requests go to `/api/*` on the same domain.
+- Locally, Vite's dev proxy routes `/api` to `localhost:4000`, so development is unchanged.
+- Pushing to GitHub auto-redeploys both the web app and the API.
 
 ## Applying the schema with plain psql (no Prisma)
 
