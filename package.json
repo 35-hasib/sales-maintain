@@ -1,0 +1,16 @@
+{
+  "name": "salesmaintain",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Broker money tracking between dealers (monorepo convenience scripts)",
+  "scripts": {
+    "install:all": "npm --prefix backend install && npm --prefix frontend install",
+    "setup:db": "npm --prefix backend run migrate:deploy && npm --prefix backend run seed",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev": "concurrently -n api,web -c green,cyan \"npm:dev:backend\" \"npm:dev:frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

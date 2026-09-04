@@ -1,0 +1,62 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { Button, Input, Field, ErrorText } from "../components/ui";
+
+export default function Login() {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      const officer = await login(email, password);
+      navigate(officer.role === "admin" ? "/officers" : "/");
+    } catch (err: any) {
+      setError(err?.message || "লগইন ব্যর্থ হয়েছে");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4 bg-slate-100">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 w-full max-w-sm">
+        <h1 className="text-2xl font-bold text-center text-emerald-700">SalesMaintain</h1>
+        <p className="text-center text-sm text-slate-500 mt-1 mb-6">
+          টাকার হিসাব · {new Date().getFullYear()}
+        </p>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Field label="ইমেইল">
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="আপনারইমেইল@example.com"
+              required
+            />
+          </Field>
+          <Field label="পাসওয়ার্ড">
+            <Input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              required
+            />
+          </Field>
+          <ErrorText message={error} />
+          <Button type="submit" disabled={busy} className="w-full">
+            {busy ? "লগইন হচ্ছে…" : "লগইন"}
+          </Button>
+        </form>
+      </div>
+    </div>
+  );
+}

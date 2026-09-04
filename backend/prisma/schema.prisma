@@ -1,0 +1,147 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Dealer {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ownerOfficer  String   @map("owner_officer_id") @db.Uuid
+  name          String
+  phone         String?
+  address       String?
+  notes         String?
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  owner        Officer    @relation("officerDealers", fields: [ownerOfficer], references: [id])
+
+  transactionsAsSeller Transaction[] @relation("sellerDealer")
+  transactionsAsBuyer  Transaction[] @relation("buyerDealer")
+
+  @@index([ownerOfficer])
+  @@map("dealers")
+}
+
+model Officer {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         String   @default("officer")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  transactions   Transaction[]        @relation("officerTransactions")
+  collections    Collection[]
+  disbursements  Disbursement[]
+  ledgerEntries  LedgerEntry[]
+  dealers        Dealer[]             @relation("officerDealers")
+
+  @@map("officers")
+}
+
+model Transaction {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sellerDealerId    String    @map("seller_dealer_id") @db.Uuid
+  buyerDealerId     String    @map("buyer_dealer_id") @db.Uuid
+  officerId         String    @map("officer_id") @db.Uuid
+  productDescription String?  @map("product_description")
+  totalAmount       Decimal   @map("total_amount") @db.Decimal(14, 2)
+  transactionDate   DateTime  @map("transaction_date") @db.Date
+  status            String    @default("pending")
+  photos            String[]  @default([])
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  sellerDealer Dealer       @relation("sellerDealer", fields: [sellerDealerId], references: [id])
+  buyerDealer  Dealer       @relation("buyerDealer", fields: [buyerDealerId], references: [id])
+  officer      Officer      @relation("officerTransactions", fields: [officerId], references: [id])
+  collections  Collection[]
+  disbursements Disbursement[]
+  ledgerEntries LedgerEntry[]
+
+  @@index([sellerDealerId])
+  @@index([buyerDealerId])
+  @@map("transactions")
+}
+
+model Collection {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  transactionId String    @map("transaction_id") @db.Uuid
+  amount        Decimal   @db.Decimal(14, 2)
+  collectedAt   DateTime  @map("collected_at") @db.Timestamptz(6)
+  paymentMethod String?   @map("payment_method")
+  note          String?
+  recordedBy    String    @map("recorded_by") @db.Uuid
+  photos        String[]  @default([])
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  transaction Transaction @relation(fields: [transactionId], references: [id])
+  recordedByOfficer Officer @relation(fields: [recordedBy], references: [id])
+
+  @@index([transactionId])
+  @@map("collections")
+}
+
+model Disbursement {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  transactionId String    @map("transaction_id") @db.Uuid
+  amount        Decimal   @db.Decimal(14, 2)
+  disbursedAt   DateTime  @map("disbursed_at") @db.Timestamptz(6)
+  paymentMethod String?   @map("payment_method")
+  note          String?
+  recordedBy    String    @map("recorded_by") @db.Uuid
+  photos        String[]  @default([])
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  transaction Transaction @relation(fields: [transactionId], references: [id])
+  recordedByOfficer Officer @relation(fields: [recordedBy], references: [id])
+
+  @@index([transactionId])
+  @@map("disbursements")
+}
+
+model LedgerEntry {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  transactionId String   @map("transaction_id") @db.Uuid
+  entryType     String   @map("entry_type")
+  referenceId   String   @map("reference_id") @db.Uuid
+  dealerId      String?  @map("dealer_id") @db.Uuid
+  amount        Decimal  @db.Decimal(14, 2)
+  occurredAt    DateTime @map("occurred_at") @db.Timestamptz(6)
+  recordedBy    String   @map("recorded_by") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  transaction Transaction @relation(fields: [transactionId], references: [id])
+  recordedByOfficer Officer @relation(fields: [recordedBy], references: [id])
+
+  @@index([transactionId])
+  @@index([dealerId])
+  @@map("ledger_entries")
+}
+
+/// The transaction_summary DB view (managed via raw SQL migration).
+model TransactionSummary {
+  id                   String  @id @db.Uuid
+  sellerDealerId       String  @map("seller_dealer_id") @db.Uuid
+  buyerDealerId        String  @map("buyer_dealer_id") @db.Uuid
+  officerId            String  @map("officer_id") @db.Uuid
+  productDescription   String? @map("product_description")
+  totalAmount          Decimal @map("total_amount") @db.Decimal(14, 2)
+  transactionDate      DateTime @map("transaction_date") @db.Date
+  totalCollected       Decimal @map("total_collected") @db.Decimal(14, 2)
+  totalDisbursed       Decimal @map("total_disbursed") @db.Decimal(14, 2)
+  officerHeldBalance   Decimal @map("officer_held_balance") @db.Decimal(14, 2)
+  amountDueFromBuyer   Decimal @map("amount_due_from_buyer") @db.Decimal(14, 2)
+  amountDueToSeller    Decimal @map("amount_due_to_seller") @db.Decimal(14, 2)
+  status               String
+  createdAt            DateTime @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime @map("updated_at") @db.Timestamptz(6)
+  sellerName           String? @map("seller_name")
+  buyerName            String? @map("buyer_name")
+  officerName          String? @map("officer_name")
+
+  @@ignore
+}
