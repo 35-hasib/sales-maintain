@@ -112,41 +112,44 @@ npm run dev           # starts API (:4000) and web (:5173) together
 
 | Service | Platform | URL example |
 |---------|----------|-------------|
+| Database | Neon (free Postgres) | `postgresql://...@ep-xxx.aws.neon.tech/salesmaintain` |
 | Backend API | Render (Web Service) | `https://salesmaintain-api.onrender.com` |
-| Database | Render (PostgreSQL) | Internal connection only |
 | Frontend (web) | Vercel | `https://salesmaintain.vercel.app` |
 | Frontend (mobile) | Google Play (EAS Build) | `com.salesmaintain.mobile` |
 
 ```
 ┌──────────┐       VITE_API_BASE        ┌──────────────┐      DATABASE_URL     ┌────────────┐
-│  Vercel  │ ────── (absolute URL) ──── │   Render     │ ──── (internal) ──── │ PostgreSQL │
-│ Frontend │                            │   Backend    │                       │  (Render)  │
+│  Vercel  │ ────── (absolute URL) ──── │   Render     │ ──── (external) ──── │   Neon     │
+│ Frontend │                            │   Backend    │                       │ PostgreSQL │
 └──────────┘                            └──────────────┘                       └────────────┘
 ```
 
-## Deploying to Render (backend + database)
+> **Free with no payment info:** Neon gives a free Postgres (no card), Render's free web
+> service needs no card, and Vercel is free. Only the Google Play account ($25 one-time) costs money.
 
-The project includes a `render.yaml` blueprint that provisions the backend API and a managed PostgreSQL database.
+## Deploying the backend to Render (free, no payment info)
 
-### What it creates
+The project includes a `render.yaml` blueprint that provisions the backend API only.
+**PostgreSQL runs on Neon** (free tier — Render no longer offers free managed Postgres).
 
-| Resource | Type | Details |
-|----------|------|---------|
-| `salesmaintain-db` | PostgreSQL | Free-tier managed database |
-| `salesmaintain-api` | Web Service | Express backend (Node.js) |
+### Step 1 — Create a free PostgreSQL on Neon
 
-### Steps
+1. Go to [neon.tech](https://neon.tech) → **Sign up** → **Create project** (no card needed).
+2. Choose region **Singapore** (closest to Bangladesh) → make sure **Postgres 16** is selected.
+3. Copy the **connection string** (the `postgresql://...` URL) — save it for later.
+
+### Step 2 — Deploy the backend on Render
 
 1. **Push the repo to GitHub** (make sure `render.yaml` is at the repo root).
 
 2. On [render.com](https://render.com), click **New** → **Blueprint** and select your repo.
-   Render reads `render.yaml` and creates the backend + database.
+   Render reads `render.yaml` and creates the backend web service.
 
 3. **Set environment variables** in the Render dashboard after provisioning:
 
    | Variable | Value |
    |----------|-------|
-   | `DATABASE_URL` | Auto-filled from the database |
+   | `DATABASE_URL` | Your **Neon** connection string |
    | `JWT_SECRET` | Auto-generated (or set your own) |
    | `JWT_EXPIRES_IN` | `7d` (default) |
    | `CORS_ORIGIN` | Your Vercel frontend URL, e.g. `https://salesmaintain.vercel.app` |
