@@ -3,10 +3,10 @@
   "buildCommand": "cd frontend && npm install && npm run build",
   "outputDirectory": "frontend/dist",
   "framework": "vite",
+  "regions": ["sin1"],
   "functions": {
     "api/index.js": {
-      "maxDuration": 10,
-      "region": "sin1"
+      "maxDuration": 10
     }
   },
   "rewrites": [
