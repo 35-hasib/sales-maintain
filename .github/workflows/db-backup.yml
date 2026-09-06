@@ -11,18 +11,28 @@ permissions:
 jobs:
   backup:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install PostgreSQL client
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client
+      - name: Install PostgreSQL 18 client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-client-18
+
+      - name: Check PostgreSQL version
+        run: |
+          /usr/lib/postgresql/18/bin/pg_dump --version
 
       - name: Dump database
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           mkdir -p backups
-          pg_dump --no-owner "$DATABASE_URL" > "backups/salesmaintain-$(date +%Y%m%d).sql"
+          /usr/lib/postgresql/18/bin/pg_dump \
+            --no-owner \
+            "$DATABASE_URL" \
+            > "backups/salesmaintain-$(date +%Y%m%d).sql"
 
       - name: Commit and push backup
         env:
@@ -30,6 +40,11 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
           git add backups/
-          git commit -m "chore: database backup $(date +%Y-%m-%d)" || echo "No changes to commit"
+
+          git commit \
+            -m "chore: database backup $(date +%Y-%m-%d)" \
+            || echo "No changes to commit"
+
           git push
