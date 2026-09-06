@@ -4,6 +4,7 @@ import { prisma } from "../prisma.js";
 import { serializeMoney } from "../serializers.js";
 import { authRequired, officerOnly } from "../middleware/auth.js";
 import { parseMoney, moneyToString } from "../money.js";
+import { cacheDelPrefix } from "../services/responseCache.js";
 
 const router = Router();
 router.use(authRequired);
@@ -120,6 +121,7 @@ router.post("/", async (req, res, next) => {
         photos: photos || [],
       },
     });
+    cacheDelPrefix(`dashboard:${req.officer.id}`);
     res.status(201).json({ transaction: serializeMoney(transaction) });
   } catch (e) {
     next(e);
@@ -204,6 +206,7 @@ router.put("/:id", async (req, res, next) => {
       where: { id: req.params.id },
       data,
     });
+    cacheDelPrefix(`dashboard:${req.officer.id}`);
     res.json({ transaction: serializeMoney(transaction) });
   } catch (e) {
     next(e);

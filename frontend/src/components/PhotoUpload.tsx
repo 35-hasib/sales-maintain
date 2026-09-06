@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { uploadToCloudinary } from "../lib/cloudinary";
-import { Button } from "./ui";
+import { Spinner } from "./ui";
 
 type Props = {
   value: string[];
@@ -84,9 +84,9 @@ export default function PhotoUpload({ value, onChange, folder, multiple = true, 
             type="button"
             onClick={() => inputRef.current?.click()}
             disabled={busy}
-            className="w-20 h-20 rounded-lg border-2 border-dashed border-slate-300 text-slate-400 text-xs flex items-center justify-center hover:border-emerald-500 hover:text-emerald-600 disabled:opacity-50"
+            className="w-20 h-20 rounded-lg border-2 border-dashed border-slate-300 text-slate-400 text-xs flex items-center justify-center hover:border-emerald-500 hover:text-emerald-600 disabled:opacity-60"
           >
-            {busy ? "আপলোডহচ্ছে…" : "+ ছবি যোগ করুন"}
+            {busy ? <Spinner size={4} /> : "+ ছবি যোগ করুন"}
           </button>
         )}
         <input
@@ -99,7 +99,6 @@ export default function PhotoUpload({ value, onChange, folder, multiple = true, 
         />
       </div>
       {error && <p className="text-xs text-rose-600">{error}</p>}
-      {busy && <Button type="button" disabled>আপলোডহচ্ছে…</Button>}
 
       {lightbox !== null && value[lightbox] && (
         <div

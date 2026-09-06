@@ -1,12 +1,27 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
+function NavIcon({ name, className = "w-5 h-5" }: { name: string; className?: string }) {
+  const paths: Record<string, string> = {
+    home: "M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1h3a1 1 0 001-1V10",
+    receipt: "M9 14l6 0M9 17l6 0M9 8l6 0M5 3l14 0 0 18-3-2-2 2-2-2-2 2-2-2-3 2z",
+    store: "M3 9l2-5h14l2 5M5 9v11a1 1 0 001 1h12a1 1 0 001-1V9M9 9a3 3 0 006 0M7 21h0",
+    ledger: "M4 5a2 2 0 012-2h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2zM8 7h8M8 11h8M8 15h5",
+    person: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z",
+  };
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d={paths[name] || ""} />
+    </svg>
+  );
+}
+
 const navItems = [
-  { to: "/", label: "হোম", icon: "🏠", roles: ["officer"] },
-  { to: "/transactions", label: "লেনদেন", icon: "🧾", roles: ["officer"] },
-  { to: "/dealers", label: "ব্যবসায়ী", icon: "🏬", roles: ["officer"] },
-  { to: "/ledger", label: "খাতা", icon: "📒", roles: ["officer"] },
-  { to: "/officers", label: "কর্মকর্তা", icon: "👤", roles: ["officer", "admin"] },
+  { to: "/", label: "হোম", icon: "home", roles: ["officer"] },
+  { to: "/transactions", label: "লেনদেন", icon: "receipt", roles: ["officer"] },
+  { to: "/dealers", label: "ব্যবসায়ী", icon: "store", roles: ["officer"] },
+  { to: "/ledger", label: "খাতা", icon: "ledger", roles: ["officer"] },
+  { to: "/officers", label: "কর্মকর্তা", icon: "person", roles: ["officer", "admin"] },
 ];
 
 const roleLabel = (role: string) => (role === "admin" ? "অ্যাডমিন" : "কর্মকর্তা");
@@ -19,6 +34,7 @@ export default function Layout() {
   const visibleNav = navItems.filter((item) => item.roles.includes(role));
 
   function handleLogout() {
+    if (!window.confirm("আপনি কি নিশ্চিত যে আপনি লগআউট করতে চান?")) return;
     logout();
     navigate("/login");
   }
@@ -55,7 +71,7 @@ export default function Layout() {
               }`
             }
           >
-            <span className="text-base">{item.icon}</span>
+            <span className="text-base"><NavIcon name={item.icon} /></span>
             {item.label}
           </NavLink>
         ))}
@@ -74,7 +90,7 @@ export default function Layout() {
               }`
             }
           >
-            <span>{item.icon}</span>
+            <NavIcon name={item.icon} />
             {item.label}
           </NavLink>
         ))}

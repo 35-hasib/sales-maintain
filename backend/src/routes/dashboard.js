@@ -3,12 +3,17 @@ import { prisma } from "../prisma.js";
 import { authRequired } from "../middleware/auth.js";
 import { serializeMoney } from "../serializers.js";
 import { parseMoney, moneyToString } from "../money.js";
+import { cacheGet, cacheSet, cacheKey } from "../services/responseCache.js";
 
 const router = Router();
 router.use(authRequired);
 
 router.get("/", async (req, res, next) => {
   try {
+    const cacheId = cacheKey(["dashboard", req.officer.id]);
+    const cached = cacheGet(cacheId);
+    if (cached !== undefined) return res.json(cached);
+
     const [agg, unsettled, recentRaw] = await Promise.all([
       prisma.$queryRawUnsafe(
         `SELECT
@@ -43,14 +48,16 @@ router.get("/", async (req, res, next) => {
     ]);
 
     const a = agg[0];
-    res.json({
+    const body = {
       floatHeld: moneyToString(parseMoney(a.float_held)),
       totalDueFromBuyers: moneyToString(parseMoney(a.total_due_from_buyers)),
       totalDueToSellers: moneyToString(parseMoney(a.total_due_to_sellers)),
       totalTransactions: a.total_transactions,
       recentActivity: recentRaw.map(serializeMoney),
       unsettledTransactions: unsettled.map(serializeMoney),
-    });
+    };
+    cacheSet(cacheId, body);
+    res.json(body);
   } catch (e) {
     next(e);
   }
@@ -83,6 +90,9 @@ router.get("/breakdown", async (req, res, next) => {
           ? "s.amount_due_from_buyer"
           : "s.amount_due_to_seller";
 
+    const cached = cacheGet(cacheKey(["dashboard", req.officer.id, "breakdown", type]));
+    if (cached !== undefined) return res.json(cached);
+
     const rows = await prisma.$queryRawUnsafe(
       `SELECT
          s.id AS transaction_id,
@@ -101,7 +111,9 @@ router.get("/breakdown", async (req, res, next) => {
       req.officer.id
     );
 
-    res.json({ type, breakdown: rows.map(serializeMoney) });
+    const body = { type, breakdown: rows.map(serializeMoney) };
+    cacheSet(cacheKey(["dashboard", req.officer.id, "breakdown", type]), body);
+    res.json(body);
   } catch (e) {
     next(e);
   }

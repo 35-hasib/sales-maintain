@@ -3,7 +3,7 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { formatTaka } from "../lib/format";
 import type { Dealer, Summary } from "../lib/types";
-import { Card, CardTitle, StatusBadge } from "../components/ui";
+import { Card, CardTitle, StatusBadge, Spinner } from "../components/ui";
 
 type Detail = {
   dealer: Dealer;
@@ -26,7 +26,7 @@ export default function DealerDetail() {
   }, [id]);
 
   if (error) return <p className="text-red-600">{error}</p>;
-  if (!data) return <p>লোড হচ্ছে…</p>;
+  if (!data) return <div className="flex justify-center py-10"><Spinner size={6} /></div>;
 
   const rows = (list: Summary[]) => (
     <tbody className="divide-y divide-slate-100">

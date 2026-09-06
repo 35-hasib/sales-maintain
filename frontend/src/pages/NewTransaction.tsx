@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { api } from "../lib/api";
 import type { Dealer } from "../lib/types";
-import { Button, Input, Textarea, Field, ErrorText, Select } from "../components/ui";
+import { Button, Input, Textarea, Field, ErrorText, Select, Spinner } from "../components/ui";
 import PhotoUpload from "../components/PhotoUpload";
 
 export default function NewTransaction() {
@@ -77,7 +77,7 @@ export default function NewTransaction() {
           </Field>
           <ErrorText message={error} />
           <div className="flex gap-2 pt-2">
-            <Button type="submit" disabled={busy}>{busy ? "তৈরি হচ্ছে…" : "লেনদেন তৈরি করুন"}</Button>
+            <Button type="submit" disabled={busy}>{busy ? <span className="inline-flex items-center gap-2"><Spinner size={3} light />লেনদেন তৈরি করুন</span> : "লেনদেন তৈরি করুন"}</Button>
           </div>
         </form>
       </CardLike>

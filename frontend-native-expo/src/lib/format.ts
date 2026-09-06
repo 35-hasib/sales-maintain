@@ -5,8 +5,7 @@ function toBn(str: string): string {
 
 export function formatTaka(value: string | number | null | undefined): string {
   const num = value === null || value === undefined || value === "" ? 0 : Number(value);
-  const fixed = num.toFixed(2);
-  const [intPart, decPart] = fixed.split(".");
+  const intPart = String(Math.round(num));
   const last3 = intPart.length > 3 ? intPart.slice(-3) : intPart;
   let rest = intPart.length > 3 ? intPart.slice(0, -3) : "";
   const groups = [last3];
@@ -15,7 +14,7 @@ export function formatTaka(value: string | number | null | undefined): string {
     groups.unshift(chunk);
     rest = rest.slice(0, -2);
   }
-  return `৳${toBn(groups.join(","))}.${toBn(decPart)}`;
+  return `৳${toBn(groups.join(","))}`;
 }
 
 export function formatDate(dateString: string | null | undefined): string {

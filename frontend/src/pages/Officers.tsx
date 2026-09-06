@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../lib/api";
 import type { Officer } from "../lib/types";
-import { Card, CardTitle, Button, Input, Field, Select, ErrorText, Pagination } from "../components/ui";
+import { Card, CardTitle, Button, Input, Field, Select, ErrorText, Pagination, Spinner } from "../components/ui";
 import { formatDate } from "../lib/format";
 
 type FormState = { name: string; email: string; password: string; role: string };
@@ -105,7 +105,7 @@ export default function Officers() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">কর্মকর্তা</h1>
-        <Button onClick={openNew}>+ কর্মকর্তা যোগ করুন</Button>
+        <Button onClick={openNew}>যোগ করুন</Button>
       </div>
 
       {error && <ErrorText message={error} />}
@@ -135,7 +135,7 @@ export default function Officers() {
               </Select>
             </Field>
             <div className="sm:col-span-2 flex gap-2">
-              <Button type="submit" disabled={busy}>{busy ? "সংরক্ষণ হচ্ছে…" : editing ? "পরিবর্তন সংরক্ষণ" : "কর্মকর্তা তৈরি করুন"}</Button>
+              <Button type="submit" disabled={busy}>{busy ? <span className="inline-flex items-center gap-2"><Spinner size={3} light />সংরক্ষণ</span> : "সংরক্ষণ"}</Button>
               <Button
                 variant="secondary"
                 onClick={() => {

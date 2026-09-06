@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, type ReactNode } from "react";
-import { api, getToken, setToken, clearToken } from "../lib/api";
+import React, { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { api, getToken, setToken, clearToken, setUnauthorizedHandler, ApiError } from "../lib/api";
+import { clearAppCache } from "../lib/cache";
 
 type Officer = {
   id: string;
@@ -11,6 +12,8 @@ type Officer = {
 type AuthState = {
   officer: Officer | null;
   loading: boolean;
+  startupError: string | null;
+  retryStartup: () => void;
   login: (email: string, password: string) => Promise<Officer>;
   logout: () => void;
 };
@@ -22,20 +25,39 @@ export type { Officer };
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [officer, setOfficer] = useState<Officer | null>(null);
   const [loading, setLoading] = useState(true);
+  const [startupError, setStartupError] = useState<string | null>(null);
 
   useEffect(() => {
-    getToken().then((token) => {
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-      api
-        .get<{ officer: Officer }>("/api/auth/me")
-        .then((d) => setOfficer(d.officer))
-        .catch(() => clearToken())
-        .finally(() => setLoading(false));
-    });
+    const onUnauthorized = () => setOfficer(null);
+    setUnauthorizedHandler(onUnauthorized);
+    return () => setUnauthorizedHandler(null);
   }, []);
+
+  const restore = useCallback(async () => {
+    setLoading(true);
+    setStartupError(null);
+    const token = await getToken();
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    try {
+      const d = await api.get<{ officer: Officer }>("/api/auth/me");
+      setOfficer(d.officer);
+    } catch (e: any) {
+      if (e instanceof ApiError && e.status === 401) {
+        await clearToken();
+      } else {
+        setStartupError(e?.message || "সংযোগ সমস্যা হয়েছে।");
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    restore();
+  }, [restore]);
 
   async function login(email: string, password: string): Promise<Officer> {
     const d = await api.post<{ token: string; officer: Officer }>("/api/auth/login", {
@@ -47,13 +69,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return d.officer;
   }
 
-  function logout() {
+  const logout = useCallback(() => {
+    clearAppCache();
     clearToken();
     setOfficer(null);
-  }
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ officer, loading, login, logout }}>
+    <AuthContext.Provider value={{ officer, loading, startupError, retryStartup: restore, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

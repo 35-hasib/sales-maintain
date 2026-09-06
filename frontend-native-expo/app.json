@@ -22,7 +22,10 @@
         "backgroundColor": "#047857"
       },
       "package": "com.salesmaintain.mobile",
-      "versionCode": 1
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "plugins": [
       [
@@ -35,8 +38,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "your-project-id"
+        "projectId": "ebcf322e-be96-40d3-88b2-d13bf8871808"
       }
-    }
+    },
+    "owner": "35-hasib"
   }
 }

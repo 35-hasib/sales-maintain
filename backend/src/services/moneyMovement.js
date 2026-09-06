@@ -1,5 +1,10 @@
 import { prisma } from "../prisma.js";
 import { parseMoney, moneyToString, gt } from "../money.js";
+import { cacheDelPrefix } from "./responseCache.js";
+
+function invalidateOfficer(officerId) {
+  if (officerId) cacheDelPrefix(`dashboard:${officerId}`);
+}
 
 // Returns the current summary row for a transaction (from the view).
 async function getSummary(tx, transactionId) {
@@ -64,6 +69,8 @@ export async function recordCollection({
       },
     });
 
+    invalidateOfficer(officerId);
+
     return { collection: coll, warning: exceedsDue ? "amount exceeds remaining due from buyer" : null };
   });
 }
@@ -125,6 +132,8 @@ export async function recordDisbursement({
         recordedBy,
       },
     });
+
+    invalidateOfficer(officerId);
 
     return { disbursement: disb };
   });
@@ -204,6 +213,8 @@ export async function updateEntry({ type, entryId, amount, date, paymentMethod, 
         data: { amount: moneyToString(newAmount), occurredAt: newDate },
       });
     }
+
+    invalidateOfficer(officerId);
 
     return { [type]: updated };
   });

@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal, Alert } from "react-native";
+import { MaterialIcons } from "@expo/vector-icons";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../lib/api";
 import type { Officer } from "../lib/types";
-import { Card, CardTitle, Button, Field, Input, PickerSelect, ErrorText, Pagination } from "../components/Themed";
+import { Card, CardTitle, Button, Field, Input, PickerSelect, ErrorText, Pagination, Footer, C } from "../components/Themed";
 import { formatDate } from "../lib/format";
 
 const ROLE_ITEMS = [{ value: "officer", label: "কর্মকর্তা" }, { value: "admin", label: "অ্যাডমিন" }];
@@ -42,9 +43,14 @@ export default function OfficersScreen() {
     setBusy(true); setError("");
     try {
       const payload: Record<string, string> = { name: formName, email: formEmail, role: formRole };
-      if (formPassword) payload.password = formPassword;
-      if (editing) await api.put(`/api/auth/${editing.id}`, payload);
-      else { payload.password = formPassword; await api.post("/api/auth/", payload); }
+      if (editing) {
+        if (formPassword) payload.password = formPassword;
+        await api.put(`/api/auth/${editing.id}`, payload);
+      } else {
+        if (!formPassword) { setError("নতুন কর্মকর্তার জন্য পাসওয়ার্ড প্রয়োজন।"); setBusy(false); return; }
+        payload.password = formPassword;
+        await api.post("/api/auth/", payload);
+      }
       setShowForm(false); setEditing(null); await load();
     } catch (e: any) { setError(e?.message || "সংরক্ষণ করা যায়নি"); }
     finally { setBusy(false); }
@@ -62,10 +68,10 @@ export default function OfficersScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
+    <ScrollView style={styles.container} contentContainerStyle={{ padding: 16, paddingTop: 8, paddingBottom: 24 }}>
       <View style={styles.header}>
         <Text style={styles.heading}>কর্মকর্তা</Text>
-        <Button title="+ যোগ করুন" onPress={openNew} />
+        <Button title="যোগ করুন" icon="add" onPress={openNew} />
       </View>
       {error ? <ErrorText message={error} /> : null}
       {showForm && (
@@ -73,10 +79,10 @@ export default function OfficersScreen() {
           <CardTitle>{editing ? "সম্পাদনা" : "নতুন কর্মকর্তা"}</CardTitle>
           <Field label="নাম *"><Input value={formName} onChangeText={setFormName} /></Field>
           <Field label="ইমেইল *"><Input value={formEmail} onChangeText={setFormEmail} keyboardType="email-address" autoCapitalize="none" /></Field>
-          <Field label={editing ? "পাসওয়ার্ড (খালি = অপরিবর্তিত)" : "পাসওয়ার্ড *"}><Input value={formPassword} onChangeText={setFormPassword} secureTextEntry /></Field>
+          <Field label={editing ? "পাসওয়ার্ড (খালি রাখলে অপরিবর্তিত)" : "পাসওয়ার্ড *"}><Input value={formPassword} onChangeText={setFormPassword} secureTextEntry /></Field>
           <Field label="ভূমিকা"><PickerSelect value={formRole} onValueChange={setFormRole} items={ROLE_ITEMS} /></Field>
           <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
-            <Button title={busy ? "সংরক্ষণ হচ্ছে…" : "সংরক্ষণ"} onPress={handleSubmit} disabled={busy} style={{ flex: 1 }} />
+            <Button title="সংরক্ষণ" busy={busy} onPress={handleSubmit} style={{ flex: 1 }} />
             <Button title="বাতিল" variant="secondary" onPress={() => { setShowForm(false); setEditing(null); }} style={{ flex: 1 }} />
           </View>
         </Card>
@@ -90,17 +96,19 @@ export default function OfficersScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 14, fontWeight: "600" }}>{o.name}</Text>
                 <Text style={{ fontSize: 12, color: "#64748b" }}>{o.email}</Text>
+                {o.createdAt ? <Text style={{ fontSize: 11, color: "#94a3b8" }}>যোগ: {formatDate(o.createdAt)}</Text> : null}
               </View>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                 <View style={{ backgroundColor: "#f1f5f9", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999 }}><Text style={{ fontSize: 11, color: "#475569" }}>{roleLabel(o.role)}</Text></View>
-                <TouchableOpacity onPress={() => openEdit(o)} style={styles.iconBtn}><Text>✏️</Text></TouchableOpacity>
-                <TouchableOpacity onPress={() => handleDelete(o)} style={styles.iconBtn}><Text>🗑️</Text></TouchableOpacity>
+                <TouchableOpacity onPress={() => openEdit(o)} style={styles.iconBtn}><MaterialIcons name="edit" size={16} color={C.primary} /></TouchableOpacity>
+                <TouchableOpacity onPress={() => handleDelete(o)} style={styles.iconBtn}><MaterialIcons name="delete" size={16} color="#e11d48" /></TouchableOpacity>
               </View>
             </View>
           </Card>
         ))
       )}
       <Pagination page={page} totalPages={totalPages} total={total} onPageChange={setPage} />
+          <Footer />
     </ScrollView>
   );
 }
@@ -109,5 +117,5 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8fafc" },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
   heading: { fontSize: 20, fontWeight: "700" },
-  iconBtn: { width: 32, height: 32, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  iconBtn: { width: 32, height: 32, borderRadius: 8, backgroundColor: "#f1f5f9", alignItems: "center", justifyContent: "center" },
 });

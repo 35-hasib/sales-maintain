@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from "react-native";
+import { StatusBar } from "expo-status-bar";
 import { useAuth } from "../context/AuthContext";
+import { Footer } from "../components/Themed";
 
 export default function LoginScreen() {
   const { login } = useAuth();
@@ -22,22 +24,27 @@ export default function LoginScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <View style={styles.card}>
-        <Text style={styles.title}>SalesMaintain</Text>
-        <Text style={styles.subtitle}>টাকার হিসাব · {new Date().getFullYear()}</Text>
-        <TextInput style={styles.input} placeholder="ইমেইল" placeholderTextColor="#94a3b8" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-        <TextInput style={styles.input} placeholder="পাসওয়ার্ড" placeholderTextColor="#94a3b8" value={password} onChangeText={setPassword} secureTextEntry />
-        {error ? <View style={styles.errorBox}><Text style={styles.errorText}>{error}</Text></View> : null}
-        <TouchableOpacity style={styles.btn} onPress={handleLogin} disabled={busy}>
-          {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>{busy ? "লগইন হচ্ছে…" : "লগইন"}</Text>}
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+    <View style={styles.shell}>
+      <StatusBar style="dark" />
+      <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <View style={styles.card}>
+          <Text style={styles.title}>SalesMaintain</Text>
+          <Text style={styles.subtitle}>টাকার হিসাব · {new Date().getFullYear()}</Text>
+          <TextInput style={styles.input} placeholder="ইমেইল" placeholderTextColor="#94a3b8" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+          <TextInput style={styles.input} placeholder="পাসওয়ার্ড" placeholderTextColor="#94a3b8" value={password} onChangeText={setPassword} secureTextEntry />
+          {error ? <View style={styles.errorBox}><Text style={styles.errorText}>{error}</Text></View> : null}
+          <TouchableOpacity style={styles.btn} onPress={handleLogin} disabled={busy}>
+            {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>লগইন</Text>}
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+      <Footer />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  shell: { flex: 1, backgroundColor: "#f1f5f9" },
   container: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#f1f5f9", padding: 16 },
   card: { backgroundColor: "#fff", borderRadius: 16, padding: 32, width: "100%", maxWidth: 380, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   title: { fontSize: 28, fontWeight: "700", color: "#047857", textAlign: "center" },

@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
+import { thumbUrl } from "../lib/cloudinary";
 
 // Display-only thumbnail gallery (no upload). Clicking a thumbnail opens a
 // full-size lightbox with prev/next navigation across the gallery's photos.
-export default function PhotoGallery({ photos }: { photos?: string[] }) {
+export default function PhotoGallery({ photos, large }: { photos?: string[]; large?: boolean }) {
   const [active, setActive] = useState<number | null>(null);
 
   useEffect(() => {
@@ -29,9 +30,9 @@ export default function PhotoGallery({ photos }: { photos?: string[] }) {
             className="p-0 border-0 bg-transparent cursor-zoom-in"
           >
             <img
-              src={url}
+              src={thumbUrl(url, large ? 192 : 128)}
               alt={`ছবি ${i + 1}`}
-              className="w-16 h-16 object-cover rounded-lg border border-slate-200 hover:opacity-90"
+              className={`${large ? "w-24 h-24" : "w-16 h-16"} object-cover rounded-lg border border-slate-200 hover:opacity-90`}
             />
           </button>
         ))}

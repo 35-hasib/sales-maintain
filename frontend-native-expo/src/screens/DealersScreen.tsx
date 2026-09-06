@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal, Alert, TextInput } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, TextInput, Linking } from "react-native";
+import { MaterialIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { api } from "../lib/api";
 import type { Dealer } from "../lib/types";
-import { Card, Button, Field, Input, Textarea, ErrorText, Pagination } from "../components/Themed";
+import { Card, Button, Field, Input, Textarea, ErrorText, Pagination, Footer, C, SheetModal } from "../components/Themed";
+import { invalidateDealers } from "../lib/cache";
 
 export default function DealersScreen() {
   const nav = useNavigation<any>();
@@ -43,6 +45,7 @@ export default function DealersScreen() {
     try {
       if (editing) await api.put(`/api/dealers/${editing.id}`, payload);
       else await api.post("/api/dealers", payload);
+      invalidateDealers();
       setShowModal(false); await load();
     } catch (e: any) { setError(e?.message); }
     finally { setBusy(false); }
@@ -51,15 +54,25 @@ export default function DealersScreen() {
   async function handleDelete(d: Dealer) {
     Alert.alert("মুছে ফেলুন", `"${d.name}" ব্যবসায়ীটি মুছে ফেলবেন?`, [
       { text: "বাতিল", style: "cancel" },
-      { text: "মুছুন", style: "destructive", onPress: async () => { try { await api.del(`/api/dealers/${d.id}`); await load(); } catch (e: any) { Alert.alert("ত্রুটি", e?.message); } } },
+      { text: "মুছুন", style: "destructive", onPress: async () => { try { await api.del(`/api/dealers/${d.id}`); invalidateDealers(); await load(); } catch (e: any) { Alert.alert("ত্রুটি", e?.message); } } },
     ]);
   }
 
+  async function callDealer(phone: string) {
+    const url = `tel:${phone}`;
+    const supported = await Linking.canOpenURL(url);
+    if (supported) {
+      Linking.openURL(url).catch(() => {});
+    } else {
+      Alert.alert("ফোন", phone);
+    }
+  }
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
+    <ScrollView style={styles.container} contentContainerStyle={{ padding: 16, paddingTop: 8, paddingBottom: 24 }}>
       <View style={styles.header}>
         <Text style={styles.heading}>ব্যবসায়ী</Text>
-        <Button title="+ যোগ করুন" onPress={openNew} />
+        <Button title="যোগ করুন" icon="add" onPress={openNew} />
       </View>
       <TextInput style={styles.searchInput} placeholder="নাম বা ফোন দিয়ে খুঁজুন…" placeholderTextColor="#94a3b8" value={search} onChangeText={(t) => { setSearch(t); setPage(1); }} />
       {error ? <ErrorText message={error} /> : null}
@@ -75,8 +88,13 @@ export default function DealersScreen() {
                   <Text style={{ fontSize: 12, color: "#64748b" }}>{d.phone || "—"}{d._count ? ` · ${d._count.transactionsAsSeller} বিক্রেতা / ${d._count.transactionsAsBuyer} ক্রেতা` : ""}</Text>
                 </View>
                 <View style={{ flexDirection: "row", gap: 4 }}>
-                  <TouchableOpacity onPress={() => openEdit(d)} style={styles.iconBtn}><Text style={{ fontSize: 16 }}>✏️</Text></TouchableOpacity>
-                  <TouchableOpacity onPress={() => handleDelete(d)} style={styles.iconBtn}><Text style={{ fontSize: 16 }}>🗑️</Text></TouchableOpacity>
+                  {d.phone ? (
+                    <TouchableOpacity onPress={() => callDealer(d.phone!)} style={styles.iconBtn}><MaterialIcons name="call" size={16} color={C.primary} /></TouchableOpacity>
+                  ) : null}
+                  <TouchableOpacity onPress={() => openEdit(d)} style={styles.iconBtn}><MaterialIcons name="edit" size={16} color={C.primary} /></TouchableOpacity>
+                  {d._count && d._count.transactionsAsSeller + d._count.transactionsAsBuyer === 0 ? (
+                    <TouchableOpacity onPress={() => handleDelete(d)} style={styles.iconBtn}><MaterialIcons name="delete" size={16} color="#e11d48" /></TouchableOpacity>
+                  ) : null}
                 </View>
               </View>
             </Card>
@@ -85,21 +103,17 @@ export default function DealersScreen() {
       )}
       <Pagination page={page} totalPages={totalPages} total={total} onPageChange={setPage} />
 
-      <Modal visible={showModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>{editing ? "ব্যবসায়ী সম্পাদনা" : "ব্যবসায়ী যোগ করুন"}</Text>
-            <Field label="নাম *"><Input value={formName} onChangeText={setFormName} /></Field>
-            <Field label="ফোন"><Input value={formPhone} onChangeText={setFormPhone} /></Field>
-            <Field label="ঠিকানা"><Input value={formAddress} onChangeText={setFormAddress} /></Field>
-            <Field label="নোট"><Textarea value={formNotes} onChangeText={setFormNotes} numberOfLines={2} /></Field>
-            <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
-              <Button title={busy ? "সংরক্ষণ হচ্ছে…" : "সংরক্ষণ"} onPress={handleSubmit} disabled={busy} style={{ flex: 1 }} />
-              <Button title="বাতিল" variant="secondary" onPress={() => setShowModal(false)} style={{ flex: 1 }} />
-            </View>
-          </View>
+      <SheetModal visible={showModal} title={editing ? "ব্যবসায়ী সম্পাদনা" : "ব্যবসায়ী যোগ করুন"} onClose={() => setShowModal(false)}>
+        <Field label="নাম *"><Input value={formName} onChangeText={setFormName} /></Field>
+        <Field label="ফোন"><Input value={formPhone} onChangeText={(t) => setFormPhone(t.replace(/[^0-9]/g, "").slice(0, 15))} keyboardType="phone-pad" /></Field>
+        <Field label="ঠিকানা"><Input value={formAddress} onChangeText={setFormAddress} /></Field>
+        <Field label="নোট"><Textarea value={formNotes} onChangeText={setFormNotes} numberOfLines={2} /></Field>
+        <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
+          <Button title="সংরক্ষণ" busy={busy} onPress={handleSubmit} style={{ flex: 1 }} />
+          <Button title="বাতিল" variant="secondary" onPress={() => setShowModal(false)} style={{ flex: 1 }} />
         </View>
-      </Modal>
+      </SheetModal>
+          <Footer />
     </ScrollView>
   );
 }
@@ -109,8 +123,5 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
   heading: { fontSize: 20, fontWeight: "700" },
   searchInput: { borderWidth: 1, borderColor: "#e2e8f0", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, marginBottom: 12, backgroundColor: "#fff" },
-  iconBtn: { width: 32, height: 32, borderRadius: 8, alignItems: "center", justifyContent: "center" },
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
-  modalContent: { backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, maxHeight: "80%" },
-  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 16 },
+  iconBtn: { width: 32, height: 32, borderRadius: 8, backgroundColor: "#f1f5f9", alignItems: "center", justifyContent: "center" },
 });

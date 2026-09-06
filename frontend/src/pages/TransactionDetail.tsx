@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { formatTaka, formatDate } from "../lib/format";
 import type { Summary, Dealer } from "../lib/types";
-import { Card, CardTitle, StatusBadge, Button, Input, Textarea, Field, Select, ErrorText, Alert } from "../components/ui";
+import { Card, CardTitle, StatusBadge, Button, Input, Textarea, Field, Select, ErrorText, Alert, Spinner } from "../components/ui";
 import PhotoUpload from "../components/PhotoUpload";
 import PhotoGallery from "../components/PhotoGallery";
 
@@ -91,7 +91,7 @@ export default function TransactionDetail() {
   }, [id]);
 
   if (error) return <p className="text-red-600">{error}</p>;
-  if (!data) return <p>লোড হচ্ছে…</p>;
+  if (!data) return <div className="flex justify-center py-10"><Spinner size={6} /></div>;
 
   const s = data.summary;
   const held = formatTaka(s.officer_held_balance);
@@ -338,8 +338,8 @@ export default function TransactionDetail() {
 
       {/* Action buttons */}
       <div className="flex flex-col sm:flex-row gap-2 sm:flex-wrap">
-        <Button onClick={() => openModal("collection")} className="w-full sm:w-auto">+ আদায় রেকর্ড করুন</Button>
-        <Button variant="secondary" onClick={() => openModal("disbursement")} className="w-full sm:w-auto">+ পরিশোধ রেকর্ড করুন</Button>
+        <Button onClick={() => openModal("collection")} className="w-full sm:w-auto">আদায় রেকর্ড করুন</Button>
+        <Button variant="secondary" onClick={() => openModal("disbursement")} className="w-full sm:w-auto">পরিশোধ রেকর্ড করুন</Button>
       </div>
 
       {s.photos && s.photos.length > 0 && (
@@ -413,7 +413,7 @@ export default function TransactionDetail() {
                 </p>
               )}
               <div className="flex gap-2 pt-2">
-                <Button type="submit" disabled={busy}>{busy ? "সংরক্ষণ হচ্ছে…" : "সংরক্ষণ"}</Button>
+                <Button type="submit" disabled={busy}>{busy ? <span className="inline-flex items-center gap-2"><Spinner size={3} light />সংরক্ষণ</span> : "সংরক্ষণ"}</Button>
                 <Button variant="secondary" onClick={() => setModal(null)}>বাতিল</Button>
               </div>
             </form>
@@ -461,7 +461,7 @@ export default function TransactionDetail() {
               </Field>
               {editError && <ErrorText message={editError} />}
               <div className="flex gap-2 pt-2">
-                <Button type="submit" disabled={busy}>{busy ? "সংরক্ষণ হচ্ছে…" : "পরিবর্তন সংরক্ষণ"}</Button>
+                <Button type="submit" disabled={busy}>{busy ? <span className="inline-flex items-center gap-2"><Spinner size={3} light />সংরক্ষণ</span> : "সংরক্ষণ"}</Button>
                 <Button variant="secondary" onClick={() => setEditing(null)}>বাতিল</Button>
               </div>
             </form>
@@ -511,7 +511,7 @@ export default function TransactionDetail() {
               </Field>
               {entryEditError && <ErrorText message={entryEditError} />}
               <div className="flex gap-2 pt-2">
-                <Button type="submit" disabled={busy}>{busy ? "সংরক্ষণ হচ্ছে…" : "পরিবর্তন সংরক্ষণ"}</Button>
+                <Button type="submit" disabled={busy}>{busy ? <span className="inline-flex items-center gap-2"><Spinner size={3} light />সংরক্ষণ</span> : "সংরক্ষণ"}</Button>
                 <Button variant="secondary" onClick={() => setEntryEditing(null)}>বাতিল</Button>
               </div>
             </form>

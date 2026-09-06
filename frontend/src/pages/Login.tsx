@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { Button, Input, Field, ErrorText } from "../components/ui";
+import { Button, Input, Field, ErrorText, Spinner } from "../components/ui";
 
 export default function Login() {
   const { login } = useAuth();
@@ -53,7 +53,7 @@ export default function Login() {
           </Field>
           <ErrorText message={error} />
           <Button type="submit" disabled={busy} className="w-full">
-            {busy ? "লগইন হচ্ছে…" : "লগইন"}
+            {busy ? <span className="inline-flex items-center gap-2"><Spinner size={3} light />লগইন</span> : "লগইন"}
           </Button>
         </form>
       </div>

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import type { Dealer } from "../lib/types";
-import { Card, Button, Input, Textarea, Field, ErrorText } from "../components/ui";
+import { Card, Button, Input, Textarea, Field, ErrorText, Spinner } from "../components/ui";
 
 type FormState = { name: string; phone: string; address: string; notes: string };
 
@@ -98,7 +98,7 @@ export default function Dealers() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">ব্যবসায়ী</h1>
-        <Button onClick={openNew}>+ ব্যবসায়ী যোগ করুন</Button>
+        <Button onClick={openNew}>যোগ করুন</Button>
       </div>
 
       <Input
@@ -128,12 +128,24 @@ export default function Dealers() {
                     </div>
                   </Link>
                   <div className="flex shrink-0 gap-1">
+                    {d.phone && (
+                      <a
+                        href={`tel:${d.phone}`}
+                        title="কল করুন"
+                        aria-label="কল করুন"
+                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                      </a>
+                    )}
                     <button type="button" title="সম্পাদনা" aria-label="সম্পাদনা" onClick={() => openEdit(d)} className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 transition">
                       <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                     </button>
-                    <button type="button" title="মুছুন" aria-label="মুছুন" onClick={() => handleDelete(d)} className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                    </button>
+                    {d._count && d._count.transactionsAsSeller + d._count.transactionsAsBuyer === 0 && (
+                      <button type="button" title="মুছুন" aria-label="মুছুন" onClick={() => handleDelete(d)} className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      </button>
+                    )}
                   </div>
                 </div>
               </li>
@@ -158,15 +170,19 @@ export default function Dealers() {
       </Card>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-40">
-          <div className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-xl p-6 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-40" onClick={() => setShowModal(false)}>
+          <div className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-xl p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-lg font-bold mb-4">{editing ? "ব্যবসায়ী সম্পাদনা" : "ব্যবসায়ী যোগ করুন"}</h2>
             <form onSubmit={handleSubmit} className="space-y-3">
               <Field label="নাম *">
                 <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
               </Field>
               <Field label="ফোন">
-                <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                <Input
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/[^0-9]/g, "").slice(0, 15) })}
+                  inputMode="numeric"
+                />
               </Field>
               <Field label="ঠিকানা">
                 <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
@@ -175,7 +191,7 @@ export default function Dealers() {
                 <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
               </Field>
               <div className="flex gap-2 pt-2">
-                <Button type="submit" disabled={busy}>{busy ? "সংরক্ষণ হচ্ছে…" : "সংরক্ষণ"}</Button>
+                <Button type="submit" disabled={busy}>{busy ? <span className="inline-flex items-center gap-2"><Spinner size={3} light />সংরক্ষণ</span> : "সংরক্ষণ"}</Button>
                 <Button variant="secondary" onClick={() => setShowModal(false)}>বাতিল</Button>
               </div>
             </form>

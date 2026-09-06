@@ -3,6 +3,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 const TOKEN_KEY = "salesmaintain_token";
 const API_BASE = process.env.EXPO_PUBLIC_API_BASE || "";
 
+let unauthorizedHandler: (() => void) | null = null;
+export function setUnauthorizedHandler(fn: (() => void) | null) {
+  unauthorizedHandler = fn;
+}
+
 export async function getToken(): Promise<string | null> {
   return AsyncStorage.getItem(TOKEN_KEY);
 }
@@ -21,7 +26,17 @@ export class ApiError extends Error {
   }
 }
 
+export class ApiTimeoutError extends Error {}
+export class ApiNetworkError extends Error {}
+
+const REQUEST_TIMEOUT_MS = 30000;
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  if (!API_BASE) {
+    throw new Error(
+      "API_BASE is empty — set EXPO_PUBLIC_API_BASE before building (see eas.json / .env)."
+    );
+  }
   const token = await getToken();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -29,10 +44,22 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   };
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, { ...options, headers, signal: controller.signal });
+  } catch (e: any) {
+    throw e?.name === "AbortError"
+      ? new ApiTimeoutError("সার্ভার থেকে উত্তর পেতে সময় বেশি লাগছে। আবার চেষ্টা করুন।")
+      : new ApiNetworkError("সংযোগ ব্যর্থ হয়েছে। ইন্টারনেট সংযোগ চেক করুন।");
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (res.status === 401) {
     await clearToken();
+    if (unauthorizedHandler) unauthorizedHandler();
   }
 
   if (!res.ok) {

@@ -26,7 +26,6 @@ export function Stat({ label, value, sub, onClick }: { label: string; value: str
       >
         <div className="text-xs text-slate-500 font-medium flex items-center justify-between">
           <span>{label}</span>
-          {onClick && <span className="text-emerald-500 text-[10px] font-semibold uppercase tracking-wide">বিস্তারিত ↓</span>}
         </div>
         <div className="text-2xl font-bold text-slate-900 mt-1">{value}</div>
         {sub && <div className="text-xs text-slate-400 mt-1">{sub}</div>}
@@ -137,6 +136,19 @@ export function Alert({ children }: { children: ReactNode }) {
 export function ErrorText({ message }: { message: string }) {
   if (!message) return null;
   return <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-3">{message}</div>;
+}
+
+export function Spinner({ size = 5, light = false }: { size?: number; light?: boolean }) {
+  return (
+    <span
+      role="status"
+      aria-label="লোড হচ্ছে"
+      className={`inline-block rounded-full border-2 animate-spin ${
+        light ? "border-white/30 border-t-white" : "border-slate-300 border-t-emerald-600"
+      }`}
+      style={{ width: size * 4, height: size * 4 }}
+    />
+  );
 }
 
 export function Pagination({

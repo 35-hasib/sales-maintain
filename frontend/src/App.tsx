@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import type { ReactElement } from "react";
 import { useAuth } from "./context/AuthContext";
+import { Spinner } from "./components/ui";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -14,7 +15,7 @@ import Officers from "./pages/Officers";
 
 function RequireAuth({ children }: { children: ReactElement }) {
   const { officer, loading } = useAuth();
-  if (loading) return <div className="p-10 text-center text-slate-500">লোড হচ্ছে…</div>;
+  if (loading) return <div className="p-10 flex justify-center"><Spinner size={6} /></div>;
   if (!officer) return <Navigate to="/login" replace />;
   return children;
 }
@@ -108,7 +109,7 @@ export default function App() {
 
 function AdminAwareWildcard() {
   const { officer, loading } = useAuth();
-  if (loading) return <div className="p-10 text-center text-slate-500">লোড হচ্ছে…</div>;
+  if (loading) return <div className="p-10 flex justify-center"><Spinner size={6} /></div>;
   return <Navigate to={officer?.role === "admin" ? "/officers" : "/"} replace />;
 }
 

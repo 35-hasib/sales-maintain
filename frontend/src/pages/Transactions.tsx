@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { formatTaka, formatDate } from "../lib/format";
 import type { Dealer, Summary } from "../lib/types";
@@ -21,8 +21,15 @@ const STATUS_LABEL: Record<string, string> = {
   settled: "সম্পন্ন",
 };
 
+function TuneIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+    </svg>
+  );
+}
+
 export default function Transactions() {
-  const navigate = useNavigate();
   const [transactions, setTransactions] = useState<Summary[]>([]);
   const [dealers, setDealers] = useState<Dealer[]>([]);
   const [error, setError] = useState("");
@@ -30,6 +37,7 @@ export default function Transactions() {
   const [filterStatus, setFilterStatus] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const pageSize = 10;
@@ -53,11 +61,11 @@ export default function Transactions() {
     }
   }
 
-  const confirmDelete = (t: Summary) => {
-    if (window.confirm(`"${t.product_description || "লেনদেন"}" লেনদেনটি মুছে ফেলবেন?`)) {
-      window.alert("ব্যাকএন্ডে ডিলিট এন্ডপয়েন্ট এখনো যুক্ত হয়নি।");
-    }
-  };
+  const activeFilterCount = [filterDealer, filterStatus, dateFrom, dateTo].filter(Boolean).length;
+
+  function clearFilters() {
+    setFilterDealer(""); setFilterStatus(""); setDateFrom(""); setDateTo(""); setPage(1);
+  }
 
   useEffect(() => {
     api.get<{ dealers: Dealer[] }>(`/api/dealers?pageSize=1000`).then((d) => setDealers(d.dealers)).catch(() => {});
@@ -72,31 +80,54 @@ export default function Transactions() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">লেনদেন</h1>
-        <Link to="/transactions/new">
-          <Button>+ নতুন</Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowFilters((v) => !v)}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold border transition ${
+              showFilters || activeFilterCount > 0
+                ? "bg-emerald-700 text-white border-emerald-700"
+                : "bg-white text-emerald-700 border-slate-300"
+            }`}
+          >
+            <TuneIcon className="w-[18px] h-[18px]" />
+            ফিল্টার{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+          </button>
+          <Link to="/transactions/new">
+            <Button>যোগ করুন</Button>
+          </Link>
+        </div>
       </div>
 
-      {/* Filters */}
-      <Card className="space-y-2">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-          <Select value={filterDealer} onChange={(e) => { setFilterDealer(e.target.value); setPage(1); }}>
-            <option value="">সব ব্যবসায়ী</option>
-            {dealers.map((d) => (
-              <option key={d.id} value={d.id}>{d.name}</option>
-            ))}
-          </Select>
-          <Select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}>
-            <option value="">সব অবস্থা</option>
-            {statuses.map((s) => (
-              <option key={s} value={s}>{STATUS_LABEL[s] ?? s}</option>
-            ))}
-          </Select>
-          <Input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1); }} />
-          <Input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }} />
-          <Button variant="secondary" onClick={() => { setFilterDealer(""); setFilterStatus(""); setDateFrom(""); setDateTo(""); setPage(1); }}>মুছুন</Button>
-        </div>
-      </Card>
+      {showFilters && (
+        <Card className="space-y-2">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+            <Select value={filterDealer} onChange={(e) => { setFilterDealer(e.target.value); setPage(1); }}>
+              <option value="">সব ব্যবসায়ী</option>
+              {dealers.map((d) => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </Select>
+            <Select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}>
+              <option value="">সব অবস্থা</option>
+              {statuses.map((s) => (
+                <option key={s} value={s}>{STATUS_LABEL[s] ?? s}</option>
+              ))}
+            </Select>
+            <div>
+              <span className="block text-[11px] text-slate-500 mb-1">শুরুর তারিখ</span>
+              <Input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1); }} />
+            </div>
+            <div>
+              <span className="block text-[11px] text-slate-500 mb-1">শেষ তারিখ</span>
+              <Input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }} />
+            </div>
+            <div className="flex items-end">
+              <Button variant="secondary" onClick={clearFilters}>মুছুন</Button>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {error && <p className="text-red-600 text-sm">{error}</p>}
 
@@ -106,9 +137,9 @@ export default function Transactions() {
         ) : (
           transactions.map((t) => (
             <Card key={t.id} className="hover:bg-slate-50 transition">
-              <div className="flex items-center justify-between gap-3">
-                <Link to={`/transactions/${t.id}`} className="min-w-0 flex-1 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
+              <div className="flex items-center gap-3">
+                <Link to={`/transactions/${t.id}`} className="min-w-0 flex-1">
+                  <div>
                     <div className="font-semibold text-sm truncate">
                       {t.product_description || "লেনদেন"}
                     </div>
@@ -116,34 +147,12 @@ export default function Transactions() {
                       {t.seller_name} → {t.buyer_name} · {formatDate(t.transaction_date)}
                     </div>
                   </div>
-                  <div className="text-right shrink-0">
-                    <div className="text-sm font-bold">{formatTaka(t.total_amount)}</div>
+                </Link>
+                <div className="flex flex-col items-end gap-1.5 shrink-0">
+                  <div className="text-sm font-bold">{formatTaka(t.total_amount)}</div>
+                  <div className="flex items-center gap-2">
                     <StatusBadge status={t.status} />
                   </div>
-                </Link>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    type="button"
-                    title="সম্পাদনা"
-                    aria-label="সম্পাদনা"
-                    onClick={() => navigate(`/transactions/${t.id}`)}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 transition"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    title="মুছুন"
-                    aria-label="মুছুন"
-                    onClick={() => confirmDelete(t)}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
                 </div>
               </div>
             </Card>

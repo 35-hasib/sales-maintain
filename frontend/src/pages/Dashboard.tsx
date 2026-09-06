@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { formatTaka, formatDate } from "../lib/format";
 import type { Summary, LedgerEntry } from "../lib/types";
-import { Card, CardTitle, Stat, StatusBadge, Button, ErrorText } from "../components/ui";
+import { Card, CardTitle, Stat, StatusBadge, Button, ErrorText, Spinner } from "../components/ui";
 
 type DashboardData = {
   floatHeld: string;
@@ -59,7 +59,7 @@ export default function Dashboard() {
   }
 
   if (error) return <p className="text-red-600">{error}</p>;
-  if (!data) return <p>ড্যাশবোর্ড লোড হচ্ছে…</p>;
+  if (!data) return <div className="flex justify-center py-10"><Spinner size={6} /></div>;
 
   const totalBreakdown = breakdown ? breakdown.rows.reduce((sum, r) => sum + Number(r.amount), 0) : 0;
 
@@ -76,15 +76,15 @@ export default function Dashboard() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">হোম</h1>
         <Link to="/transactions/new">
-          <Button>+ নতুন লেনদেন</Button>
+          <Button>নতুন লেনদেন</Button>
         </Link>
       </div>
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 gap-3">
-        <Stat label="হাতে থাকা টাকা" value={formatTaka(data.floatHeld)} onClick={() => openBreakdown("held")} sub="আদায় দেখতে চাপুন" />
-        <Stat label="ক্রেতার নিকট প্রাপ্য" value={formatTaka(data.totalDueFromBuyers)} onClick={() => openBreakdown("buyers")} sub="কে বাকি দেখতে চাপুন" />
-        <Stat label="বিক্রেতাকে প্রদেয়" value={formatTaka(data.totalDueToSellers)} onClick={() => openBreakdown("sellers")} sub="কাকে দিতে হবে দেখতে চাপুন" />
+        <Stat label="হাতে আছে" value={formatTaka(data.floatHeld)} onClick={() => openBreakdown("held")} />
+        <Stat label="পাওয়া যাবে" value={formatTaka(data.totalDueFromBuyers)} onClick={() => openBreakdown("buyers")} />
+        <Stat label="দিতে হবে" value={formatTaka(data.totalDueToSellers)} onClick={() => openBreakdown("sellers")} />
       </div>
 
       {/* Open transactions */}
@@ -94,7 +94,7 @@ export default function Dashboard() {
           <span className="text-xs text-slate-400">মোট {data.totalTransactions}টি</span>
         </div>
         {data.unsettledTransactions.length === 0 ? (
-          <p className="text-sm text-slate-500 py-2">কোনো বাকি লেনদেন নেই। 🎉</p>
+          <p className="text-sm text-slate-500 py-2">কোনো বাকি লেনদেন নেই।</p>
         ) : (
           <ul className="divide-y divide-slate-100 mt-2">
             {data.unsettledTransactions.map((t) => (
@@ -175,7 +175,7 @@ export default function Dashboard() {
             </div>
 
             {breakdown.loading ? (
-              <p className="text-sm text-slate-500 py-4">লোড হচ্ছে…</p>
+              <div className="flex justify-center py-6"><Spinner size={5} /></div>
             ) : breakdown.error ? (
               <div className="py-3"><ErrorText message={breakdown.error} /></div>
             ) : breakdown.rows.length === 0 ? (
