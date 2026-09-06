@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import { prisma } from "./prisma.js";
 import authRoutes from "./routes/auth.js";
 import dealerRoutes from "./routes/dealers.js";
 import transactionRoutes from "./routes/transactions.js";
@@ -15,7 +16,14 @@ export function createApp() {
   app.use(cors({ origin: (process.env.CORS_ORIGIN || "").split(",").filter(Boolean) }));
   app.use(express.json());
 
-  app.get("/health", (_req, res) => res.json({ ok: true }));
+  app.get("/health", async (_req, res) => {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: "db unreachable" });
+    }
+  });
 
   app.use("/api/auth", authRoutes);
   app.use("/api/dealers", dealerRoutes);
