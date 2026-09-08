@@ -26,6 +26,7 @@ async function main() {
     data: {
       name: "Admin",
       email: "admin@salesmaintain.test",
+      phone: "01711111111",
       passwordHash: await bcrypt.hash("admin123", 10),
       role: "admin",
     },
@@ -35,6 +36,7 @@ async function main() {
     data: {
       name: "Rahim Uddin",
       email: "officer@salesmaintain.test",
+      phone: "01722222222",
       passwordHash: await bcrypt.hash("officer123", 10),
       role: "officer",
     },
@@ -176,8 +178,8 @@ async function main() {
   });
 
   console.log("Seed complete.");
-  console.log("Admin login:   admin@salesmaintain.test / admin123");
-  console.log("Officer login: officer@salesmaintain.test / officer123");
+  console.log("Admin login:   admin@salesmaintain.test or 01711111111 / admin123");
+  console.log("Officer login: officer@salesmaintain.test or 01722222222 / officer123");
 }
 
 main()
