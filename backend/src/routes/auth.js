@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "../prisma.js";
 import { signToken, authRequired, requireRole } from "../middleware/auth.js";
+import { deleteOfficerAndData } from "../services/officerCleanup.js";
 
 const router = Router();
 
@@ -134,26 +135,26 @@ router.put("/:id", authRequired, requireRole("admin"), async (req, res, next) =>
 
 router.delete("/:id", authRequired, requireRole("admin"), async (req, res, next) => {
   try {
-    const exists = await prisma.officer.findUnique({ where: { id: req.params.id } });
-    if (!exists) return res.status(404).json({ error: "Officer not found" });
-
-    const hasTransactions = await prisma.transaction.count({
-      where: { officerId: req.params.id },
-    });
-    if (hasTransactions > 0) {
-      return res.status(409).json({
-        error: "Cannot delete this officer — they have transactions. Their data must be preserved for the audit trail.",
-      });
-    }
-
-    // Remove their dealers (and any other owned data) before the officer.
-    await prisma.dealer.deleteMany({ where: { ownerOfficer: req.params.id } });
-
-    const officer = await prisma.officer.delete({
+    const target = await prisma.officer.findUnique({
       where: { id: req.params.id },
       select: { id: true, name: true, email: true, role: true, createdAt: true },
     });
-    res.json({ officer });
+    if (!target) return res.status(404).json({ error: "Officer not found" });
+
+    if (target.id === req.officer.id) {
+      return res.status(400).json({ error: "You cannot delete your own account" });
+    }
+
+    if (target.role === "admin") {
+      const adminCount = await prisma.officer.count({ where: { role: "admin" } });
+      if (adminCount <= 1) {
+        return res.status(409).json({ error: "Cannot delete the last admin account" });
+      }
+    }
+
+    await deleteOfficerAndData(target.id);
+
+    res.json({ officer: target });
   } catch (e) {
     next(e);
   }

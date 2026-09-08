@@ -1,45 +1,77 @@
 # SalesMaintain
 
-A full-stack web app for a marketing officer / broker who sells products between two dealers
-(a **Seller Dealer** and a **Buyer Dealer**) and needs to track the money flow between them —
-including partial payments and cash the officer temporarily holds.
+A full-stack **web + Android** app for a marketing officer / broker who sells products between two
+dealers (a **Seller Dealer** and a **Buyer Dealer**) and needs to track the money flow between them —
+including partial payments and cash the officer temporarily holds in hand.
 
-## Stack
+The UI is fully localized in **Bengali (Bangla)** and formats money in **Taka (৳)** with Bengali
+digits. Each officer only sees **their own book** — data is scoped per officer throughout the app.
 
-- **Backend**: Node.js + Express, REST API
-- **Database**: PostgreSQL, ORM via **Prisma**
-- **Frontend**: React + TypeScript + Tailwind CSS
-- **Auth**: email/password + JWT (officer role; schema ready for more roles)
+```
+SalesMaintain
+├── api/                      # Vercel serverless entry (imports the backend Express app)
+├── backend/                  # Node.js + Express + Prisma REST API (PostgreSQL)
+├── frontend/                 # React + TypeScript + Vite + Tailwind web app
+├── frontend-native-expo/     # React Native (Expo) Android app
+├── link-view-app/            # unused Expo boilerplate (not part of the product)
+├── scripts/                  # local PostgreSQL cluster helper (scripts/localpg.sh)
+├── sql/                      # plain-SQL schema (alternative to Prisma migrations)
+└── .github/workflows/        # CI (db-backup.yml)
+```
 
 ## Features
 
-- **Dealer management** — CRUD for dealers; dealer detail page shows their transactions as
-  seller and as buyer, plus a running balance summary (owed to them / owed by them).
-- **Transactions** — create a deal (seller, buyer, amount, product, date);
-  list with filters (dealer, status, date range); detail page with collections, disbursements,
-  running totals and the current officer-held balance.
-- **Collections** (money received from buyer) — overpayments are **allowed but warned**.
-- **Disbursements** (money paid to seller) — hard validation: you cannot pay out more than the
-  currently held amount (`collected − already disbursed`) for that transaction.
-- **Void / Reversal** — every money record is **immutable**: instead of deleting, you void a
-  collection/disbursement, which adds an offsetting reversal entry (full or partial) and marks the
-  original as voided. Both a per-row *Void* button and a manual *Adjustment* (partial reversal) are supported.
-- **Officer Dashboard** — total cash held (float), total due from buyers, total owed to sellers,
-  recent combined activity feed, and the list of open transactions.
-- **Ledger / History** — a single chronological feed of every collection, disbursement and
-  reversal, filterable by dealer and date range, **exportable to CSV** (filtered view or full ledger).
-- **Officer management** — admins create new officers (no public self-registration).
+- **Dealer management** — CRUD; dealer detail page shows their transactions as **seller** and as
+  **buyer** with a running balance summary (owed to them / owed by them / net). Search (debounced)
+  and pagination.
+- **Transactions** — create a deal (seller, buyer, amount, product, date, optional photos); list
+  with filters (dealer, status, date range); detail page with collections and disbursements shown
+  chronologically with running totals and the current officer-held balance. Metadata is editable.
+- **Collections** (মালামাল বাবদ আদায় — money received from the buyer) — payment method
+  (cash/bank/mobile banking/other), note, date and photos. **Over-collection is allowed but warned.**
+- **Disbursements** (পরিশোধ — money paid to the seller) — same shape as collections. Hard
+  validation: you cannot disburse more than the currently held amount
+  (`total_collected − total_disbursed`) for that transaction.
+- **Editing** — transactions, collections and disbursements can be corrected/edited via `PUT`; there
+  is no delete/void — the audit trail is preserved and edits are the correction mechanism.
+- **Ledger / History** — a single chronological feed of every collection & disbursement, filterable
+  by dealer and date range, **exportable to CSV** (filtered view or full ledger via `?all=1`).
+- **Officer Dashboard** — 3 KPI cards (cash in hand, due from buyers, due to sellers) with
+  click-through **per-dealer breakdown modals**, the list of unsettled transactions, and the recent
+  activity feed.
+- **Photo attachments** — Cloudinary-hosted photos on transactions, collections and disbursements
+  with a thumbnail gallery and zoomable lightbox, both on web and mobile.
+- **Officer management** — admins create/edit/delete officers (no public self-registration).
+- **Role isolation** — each officer only sees their own dealers/transactions/money (`officer_id` /
+  `owner_officer_id` scoping on every route). Admins manage officers only — they are **blocked from
+  business routes**.
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Backend | Node.js 18+, Express 4, ESM |
+| Database | PostgreSQL 13+, ORM via **Prisma 5** |
+| Auth | email/password, **JWT** (`jsonwebtoken`), `bcryptjs`, **zod** validation |
+| Money handling | `decimal.js-light` — money as `NUMERIC(14,2)` strings, never floats |
+| Web frontend | React 18, React Router 6, TypeScript 5, **Vite** 5, Tailwind CSS 3 |
+| Mobile | React Native 0.74, **Expo 51**, React Navigation 6, AsyncStorage, expo-image-picker |
+| Image hosting | Cloudinary (client-side signed direct upload; secret stays server-side) |
+| Deploy | Vercel (web + serverless API), EAS Build (Android), Neon (Postgres) |
+| CI/CD | GitHub Actions (weekly DB backup) |
 
 ## Money model
 
-- Money is stored as `NUMERIC(14,2)` and shelled between the DB and API as **strings** — never floats.
+- Money is stored as `NUMERIC(14,2)` and passed between DB and API as **strings** — never floats.
 - A transaction reaches **`settled`** when: `total_collected = total_amount` **and**
   `total_disbursed = total_amount`.
 - Derived values (`total_collected`, `total_disbursed`, `officer_held_balance`,
-  `amount_due_from_buyer`, `amount_due_to_seller`, `status`) are computed by
-  the `transaction_summary` **view** — a single source of truth used by every list/dashboard screen.
+  `amount_due_from_buyer`, `amount_due_to_seller`, `status`, plus joined dealer names) are computed
+  by the `transaction_summary` **PostgreSQL VIEW** — a single source of truth used by every
+  list/dashboard screen.
 - The officer-held balance per transaction = `collected − disbursed`.
-  Reversal/voided entries are excluded from the sums via signed offsets.
+- A database **trigger** keeps `transactions.status` in sync automatically after every
+  collection/disbursement insert or update, and refreshes `updated_at`.
 
 > **Note (v1):** disbursements are validated **per transaction** — the officer can only pay a
 > seller from cash collected on *that* transaction. Cross-transaction float sharing is a
@@ -47,29 +79,47 @@ including partial payments and cash the officer temporarily holds.
 
 ## Database schema
 
-The schema/migrations live in `backend/prisma/migrations/`. A summary of the tables:
+Schema and migrations live in `backend/prisma/migrations/`. A summary of the tables:
 
-- `dealers` — sellers and buyers share this table
 - `officers` — app users (`role` defaults to `officer`; `admin` can create officers)
-- `transactions` — a deal between two dealers (amount, product, date)
-- `collections` — money received from the buyer
-- `disbursements` — money paid to the seller
-- `ledger_entries` — single combined audit / activity feed (collection, disbursement, void)
+- `dealers` — sellers and buyers share this table; `owner_officer_id` scopes each officer's book
+- `transactions` — a deal between two dealers (`seller_dealer_id`, `buyer_dealer_id`,
+  `officer_id`, `total_amount`, `product_description`, `transaction_date`, `status`, `photos TEXT[]`)
+- `collections` — money received from the buyer (`amount`, `collected_at`, `payment_method`,
+  `note`, `photos`, `recorded_by`)
+- `disbursements` — money paid to the seller (same shape as collections)
+- `ledger_entries` — single combined audit / activity feed for every collection and disbursement
+  (`entry_type`, `reference_id`, `dealer_id`, `amount`, `occurred_at`, `recorded_by`)
 - `transaction_summary` — a **PostgreSQL VIEW** computing all derived money values per transaction
 
-Money-changing operations (creating a collection/disbursement, voiding) run inside a Prisma
-**DB transaction** together with the `ledger_entries` insert and rely on the DB status trigger.
+Money-changing operations (recording/editing a collection or disbursement) run inside a Prisma
+**DB transaction** together with the `ledger_entries` insert, and rely on the DB status trigger.
+Indexes cover `transactions.seller/buyer/officer_id`, `collections/disbursements.transaction_id`,
+`ledger_entries (transaction_id, dealer_id, occurred_at)` and `dealers.owner_officer_id`.
+
+## Authentication & roles
+
+- Login (`POST /api/auth/login`) returns a **JWT** (payload `{ id, email, role, name }`, default
+  expiry `7d` via `JWT_EXPIRES_IN`).
+- Middleware: `authRequired` (verifies `Authorization: Bearer <token>`), `requireRole(...)`
+  (used for admin-only officer management), and `officerOnly` (blocks admins from business routes).
+- Web stores the token in `localStorage`; the mobile app stores it in **AsyncStorage**
+  (`salesmaintain_token`).
+- No public registration — only admins create officers.
 
 ## Prerequisites
 
 - Node.js 18+
 - PostgreSQL 13+ (a running server you can connect to)
 
+For local development without system Postgres, `scripts/localpg.sh` manages a private cluster in
+`.localpg/` (`start | stop | status`).
+
 ## Getting started (backend)
 
 ```bash
 cd backend
-cp .env.example .env      # then edit DATABASE_URL, JWT_SECRET
+cp .env.example .env      # then edit DATABASE_URL, JWT_SECRET (+ Cloudinary vars, optional)
 npm install
 npx prisma migrate deploy # applies schema + the transaction_summary view/trigger
 npm run seed              # sample officers, dealers and transactions
@@ -83,8 +133,8 @@ Seed logins (printed by the seed script):
 | admin@salesmaintain.test | admin123 | admin |
 | officer@salesmaintain.test | officer123 | officer |
 
-`prisma migrate deploy` applies the existing migration and also creates the `transaction_summary`
-view and the status-trigger (they live in the migration `20260902000000_init/migration.sql`).
+`prisma migrate deploy` applies the existing migrations and also creates the `transaction_summary`
+view and the status trigger (they live in `20260902000000_init/migration.sql`).
 
 ## Getting started (frontend)
 
@@ -101,30 +151,110 @@ Open http://localhost:5173 and sign in with one of the seeded accounts.
 From the **project root** you can install everything and run both dev servers with one command:
 
 ```bash
-npm run install:all   # install backend + frontend deps
+npm run install:all   # installs backend + frontend deps
 # configure backend/.env, then:
 npm run setup:db      # run migrations + seed
-npm install           # for the root concurrently helper
+npm install           # installs the root concurrently helper
 npm run dev           # starts API (:4000) and web (:5173) together
 ```
+
+## Scripts
+
+**Root** (`package.json`)
+
+| Script | Command |
+|---|---|
+| `install:all` | installs backend + frontend deps |
+| `setup:db` | `migrate:deploy` + `seed` |
+| `dev:backend` | runs the backend dev server |
+| `dev:frontend` | runs the frontend dev server |
+| `dev` | runs both concurrently (labels `api`, `web`) |
+
+**Backend** (`backend/package.json`)
+
+| Script | Command |
+|---|---|
+| `dev` | `node --watch src/server.js` |
+| `build` | `npx prisma generate` |
+| `start` | `prisma migrate deploy` + `node src/server.js` |
+| `migrate` | `prisma migrate dev` |
+| `migrate:deploy` | `prisma migrate deploy` |
+| `seed` | `node prisma/seed.js` (`--force` to reseed) |
+| `db:push` | `prisma db push` |
+
+**Frontend** (`frontend/package.json`): `dev`, `build` (`tsc -b && vite build`), `preview`.
+**Mobile** (`frontend-native-expo/package.json`): `start`, `android` (`expo run:android`), `ios`, `web`.
+
+## Environment variables
+
+### Backend (`backend/.env`, see `.env.example`)
+
+| Variable | Purpose |
+|---|---|
+| `DATABASE_URL` | Postgres connection string (local: `localhost:5543`; Neon **pooled** in prod) |
+| `JWT_SECRET` | Long random string used to sign tokens |
+| `JWT_EXPIRES_IN` | Token lifetime (default `7d`) |
+| `PORT` | API port (default `4000`) |
+| `CORS_ORIGIN` | Comma-separated allowed origins (default `http://localhost:5173`) |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud |
+| `CLOUDINARY_API_KEY` | Cloudinary API key |
+| `CLOUDINARY_API_SECRET` | Cloudinary signing secret (**keep server-side only**) |
+
+### Web frontend
+
+- `VITE_API_BASE` — optional; when empty, requests go to same-origin `/api` (local dev uses the
+  Vite proxy to `:4000`). **Do not set it in production.**
+
+### Mobile (`frontend-native-expo/.env`)
+
+- `EXPO_PUBLIC_API_BASE` — baked into the JS bundle at build time
+  (e.g. `https://sales-maintain-iis1.vercel.app`). Set it **before** running `eas build`.
+
+## API overview
+
+All business routes use `officerOnly` (bearer token required); officer management uses
+`requireRole("admin")`.
+
+| Method | Path | Description | Access |
+|---|---|---|---|
+| GET | `/health` | DB connectivity check (used by the Vercel warm-up cron) | none |
+| POST | `/api/auth/login` | Login → JWT + officer | none |
+| GET | `/api/auth/me` | Current officer | bearer |
+| GET / POST | `/api/auth/` | List (paginated) / create officers | admin |
+| PUT / DELETE | `/api/auth/:id` | Update / delete officer | admin |
+| GET / POST | `/api/dealers` | List (search, paginated) / create dealer | officer |
+| GET / PUT / DELETE | `/api/dealers/:id` | Dealer detail (as-seller + as-buyer + balance summary) / update / delete | officer |
+| GET / POST | `/api/transactions` | List (filters: `dealerId`, `status`, `dateFrom`, `dateTo`, pagination) / create | officer |
+| GET / PUT | `/api/transactions/:id` | Detail (collections + disbursements with running totals) / edit metadata | officer |
+| POST | `/api/collections` | Record a collection (returns warning on overpay) | officer |
+| PUT | `/api/collections/:id` | Edit a collection entry | officer |
+| POST | `/api/disbursements` | Record a disbursement (validated ≤ held balance) | officer |
+| PUT | `/api/disbursements/:id` | Edit a disbursement entry | officer |
+| GET | `/api/ledger` | Combined feed (filters: `dealerId`, `dateFrom`, `dateTo`, `transactionId`) | bearer |
+| GET | `/api/ledger/export` | CSV export (`?all=1` = full ledger, else uses filters) | bearer |
+| GET | `/api/dashboard` | Float held, due from buyers, due to sellers, recent activity, unsettled transactions | officer |
+| GET | `/api/dashboard/breakdown` | Per-dealer breakdown (`?type=held\|buyers\|sellers`) | officer |
+| POST | `/api/upload/signature` | Cloudinary signed upload payload (secret stays server-side) | officer |
+
+All endpoints except `/health` and `/api/auth/login` require an `Authorization: Bearer <token>` header.
 
 ## Deployment overview
 
 | Service | Platform | URL example |
-|---------|----------|-------------|
+|---|---|---|
 | Database | Neon (free Postgres) | `postgresql://...@ep-xxx.aws.neon.tech/salesmaintain` |
-| Backend API | Vercel (serverless function) | `https://salesmaintain.vercel.app/api/...` |
-| Frontend (web) | Vercel (static) | `https://salesmaintain.vercel.app` |
+| Backend API | Vercel (serverless function) | `https://sales-maintain-iis1.vercel.app/api/...` |
+| Frontend (web) | Vercel (static) | `https://sales-maintain-iis1.vercel.app` |
 | Frontend (mobile) | Google Play (EAS Build) | `com.salesmaintain.mobile` |
 
 ```
-┌───────────────────────┐      DATABASE_URL     ┌────────────┐
-│        Vercel         │ ──────── (external) ──│    Neon    │
-│ ┌───────┐  ┌────────┐ │                       │ PostgreSQL │
-│ │  Web  │  │  API   │ │                       └────────────┘
-│ │ app   │  │(server)│ │
-│ └───────┘  └────────┘ │
-└───────────────────────┘
+┌────────────────────────┐      DATABASE_URL      ┌────────────┐
+│        Vercel          │ ───────── (external) ──│    Neon    │
+│ ┌────────┐  ┌────────┐ │                        │ PostgreSQL │
+│ │  Web   │  │  API   │ │                        └────────────┘
+│ │  app   │  │(server)│ │
+│ └────────┘  └────────┘ │
+└────────────────────────┘
 ```
 
 > **100% free, no payment info anywhere:** Neon gives free Postgres (no card), Vercel hosts both
@@ -132,8 +262,13 @@ npm run dev           # starts API (:4000) and web (:5173) together
 
 ## Deploying everything to Vercel (backend + frontend, free)
 
-Both the frontend and backend deploy from the **same repo** to the **same Vercel project**,
-so the web app and API share one domain (`https://salesmaintain.vercel.app`). No CORS setup needed.
+Both the frontend and backend deploy from the **same repo** to the **same Vercel project**, so the
+web app and API share one domain. `vercel.json`:
+- `installCommand` — installs root + backend deps, runs `prisma generate` and `prisma migrate deploy`
+- `buildCommand` — builds the frontend into `frontend/dist`
+- region `sin1` (Singapore); `/api/(.*)` served through the `api/index.js` serverless Express
+  function (`maxDuration: 10`); other routes rewritten to `index.html` (React Router SPA behavior)
+- a **cron** hits `/api/health` every 5 minutes to keep the function/DB connection warm
 
 ### Step 1 — Create a free PostgreSQL on Neon
 
@@ -161,31 +296,14 @@ so the web app and API share one domain (`https://salesmaintain.vercel.app`). No
 
    > Do **not** set `VITE_API_BASE` — the frontend calls `/api` on the same domain.
 
-4. Click **Deploy**. `vercel.json` handles everything:
-   - installs backend deps and runs `prisma generate` (install step)
-   - builds the frontend into `frontend/dist` (build step)
-   - serves `/api/*` through `api/index.js` (serverless Express) 
-   - rewrites other routes to `index.html` (React Router)
-
-### Step 3 — Run database migrations once
-
-Vercel has no "start" step, so migrations run once from your computer:
-
-```bash
-cd backend
-DATABASE_URL="<your-neon-pooled-url>" npx prisma migrate deploy
-DATABASE_URL="<your-neon-pooled-url>" npx prisma db seed
-```
-
-> **Why pooled (PGBouncer):** serverless functions open many short-lived connections.
-> Use Neon's **pooled** connection string so Prisma doesn't exhaust the DB's connection limit.
-
-After that, open `https://salesmaintain.vercel.app` and log in with the seeded admin account.
+4. Click **Deploy** — `vercel.json` installs backend deps, runs Prisma migrations/generate, builds
+   the frontend into `frontend/dist`, serves `/api/*` through the serverless Express function, and
+   rewrites all other routes to `index.html`.
 
 ### Verifying the API
 
-- `https://salesmaintain.vercel.app/api/health` → `{ "ok": true }`
-- Dashboard at `https://salesmaintain.vercel.app/api/dashboard`
+- `https://sales-maintain-iis1.vercel.app/api/health` → `{ "ok": true }`
+- Dashboard at `https://sales-maintain-iis1.vercel.app/api/dashboard`
 
 ### How it works
 
@@ -203,60 +321,61 @@ status trigger) is also provided as a single file in `sql/schema.sql`:
 psql "$DATABASE_URL" -f sql/schema.sql
 ```
 
-## Environment variables (`backend/.env`)
-
-- `DATABASE_URL` — Postgres connection string, e.g. `postgresql://user:pass@localhost:5432/salesmaintain?schema=public`
-- `JWT_SECRET` — long random string used to sign tokens
-- `JWT_EXPIRES_IN` — token lifetime (default `7d`)
-- `PORT` — API port (default `4000`)
-- `CORS_ORIGIN` — comma-separated allowed origins (default `http://localhost:5173`)
-
-## API overview
-
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/api/auth/login` | login, returns JWT + officer |
-| GET / POST | `/api/auth/` | list / create officers (admin) |
-| GET / POST | `/api/dealers` | list / create dealers |
-| GET / PUT / DELETE | `/api/dealers/:id` | dealer detail / update / delete |
-| GET / POST | `/api/transactions` | list (filters) / create transaction |
-| GET | `/api/transactions/:id` | detail with collections & disbursements + running totals |
-| POST | `/api/collections` | record a collection |
-| POST | `/api/collections/:id/void` | full or partial reversal of a collection |
-| POST | `/api/disbursements` | record a disbursement |
-| POST | `/api/disbursements/:id/void` | full or partial reversal of a disbursement |
-| GET | `/api/ledger` | combined chronological feed (filter by `dealerId`, `dateFrom`, `dateTo`) |
-| GET | `/api/ledger/export` | CSV export (`?all=1` for full ledger, else uses filters) |
-| GET | `/api/dashboard` | float, outstanding totals, recent activity, open transactions |
-
-All endpoints (except `/api/auth/login` and `/health`) require an `Authorization: Bearer <token>` header.
-
 ## Project layout
 
 ```
+api/
+  index.js                    # Vercel serverless entry (imports createApp)
 backend/
   prisma/
-    schema.prisma          # Prisma models (matches the SQL schema)
-    migrations/            # SQL migrations incl. the view + trigger
-    seed.js                # sample data
+    schema.prisma             # Prisma models (matches the SQL schema)
+    migrations/               # SQL migrations incl. the view + trigger
+    seed.js                   # sample data
   src/
-    routes/                # auth, dealers, transactions, collections, disbursements, ledger, dashboard
-    services/moneyMovement.js  # collections/disbursements/void inside DB transactions
-    middleware/auth.js     # JWT + role guards
-    money.js               # decimal money helpers
+    app.js                    # Express app factory (routes, CORS, error handling)
+    middleware/auth.js        # JWT sign/verify, role guards (officerOnly, requireRole)
+    routes/                   # auth, dealers, transactions, collections, disbursements,
+                              #   ledger, dashboard, upload
+    services/                 # moneyMovement (DB txns), responseCache (TTL), cloudinary
+    money.js                  # decimal money helpers (string-safe)
+    serializers.js            # Decimal -> "0.00" serialization
 frontend/
   src/
-    pages/                 # Dashboard, Dealers, DealerDetail, Transactions, TransactionDetail,
-                           # NewTransaction, Ledger, Officers, Login
-    components/            # Layout, shared UI
-    lib/                   # api client, format helpers (৳ Taka), types
+    pages/                    # Login, Dashboard, Dealers, DealerDetail, Transactions,
+                              #   TransactionDetail, NewTransaction, Ledger, Officers
+    components/               # Layout, shared UI, PhotoUpload/Gallery/Lightbox
+    lib/                      # api client, format helpers (৳ Taka), types, cloudinary
     context/AuthContext.tsx
+frontend-native-expo/         # React Native (Expo) Android app — mirrors the web app
+  src/
+    screens/                  # Login, Dashboard, Transactions, TransactionDetail,
+                              #   NewTransaction, Dealers, DealerDetail, Ledger, Officers
+    components/               # Themed UI, PhotoPicker/Gallery/Lightbox
+    lib/                      # api, cache (AsyncStorage), types, format, cloudinary
+scripts/
+  localpg.sh                  # private PostgreSQL cluster helper (.localpg/)
+sql/
+  schema.sql                  # plain-SQL schema (alternative to Prisma migrations)
+.github/workflows/db-backup.yml  # weekly PostgreSQL dump + commit
 ```
+
+## CI/CD — database backups
+
+`.github/workflows/db-backup.yml` runs **weekly** (Sunday 06:00 UTC, also manually via
+`workflow_dispatch`): it installs `postgresql-client-18`, runs `pg_dump --no-owner` against the
+`DATABASE_URL` GitHub secret, and commits `backups/salesmaintain-<date>.sql` to the repo.
 
 ## Deploying the mobile app (Android — Free via Expo)
 
-The `frontend-native-expo/` directory is a React Native Expo app. Build and distribute
-using **EAS Build** (Expo Application Services) — **free for Android** (30 builds/month).
+The `frontend-native-expo/` directory is a React Native **Expo** app that mirrors the web app
+(mobile-optimized screens, AsyncStorage caching, connection-error retry). Build and distribute using
+**EAS Build** (Expo Application Services) — **free for Android** (30 builds/month).
+
+`eas.json` defines three profiles (each already sets `EXPO_PUBLIC_API_BASE` to
+`https://sales-maintain-iis1.vercel.app`):
+- `development` — dev client (internal)
+- `preview` — **APK** for direct install (internal)
+- `production` — **AAB** for Google Play (submitted via a Google service account, `internal` track)
 
 ### Cost
 
@@ -281,8 +400,8 @@ eas login
 cd frontend-native-expo
 eas init
 
-# 5. Set your backend URL
-echo "EXPO_PUBLIC_API_BASE=https://salesmaintain-api.onrender.com" > .env
+# 5. Point the app at your backend (already done in .env)
+echo "EXPO_PUBLIC_API_BASE=https://sales-maintain-iis1.vercel.app" > .env
 
 # 6. Build APK (free, ~10-15 min in cloud)
 eas build --platform android --profile preview
@@ -323,13 +442,23 @@ eas update --branch production --message "Bug fix"
 
 | Variable | Where | Value |
 |----------|-------|-------|
-| `EXPO_PUBLIC_API_BASE` | `frontend-native-expo/.env` | Backend URL (e.g. `https://salesmaintain-api.onrender.com`) |
+| `EXPO_PUBLIC_API_BASE` | `frontend-native-expo/.env` (also per-profile in `eas.json`) | Backend URL (e.g. `https://sales-maintain-iis1.vercel.app`) |
 
 > `EXPO_PUBLIC_*` vars are baked into the JS bundle at build time.
 > Set them **before** running `eas build`.
 
 ## Currency formatting
 
-Money displays as Taka (৳) with Indian/Bengali digit grouping, e.g. **৳1,25,000.00** (see
-`frontend/src/lib/format.ts`). Bengali names render cleanly via the **Noto Sans Bengali** font
-loaded in `frontend/index.html`.
+Money displays as Taka (৳) with Indian/Bengali digit grouping, e.g. **৳1,25,000.00** with Bengali
+digits (see `frontend/src/lib/format.ts` and `frontend-native-expo/src/lib/format.ts`). Bengali
+names render cleanly via the **Noto Sans Bengali** font loaded in `frontend/index.html`.
+
+## Notes & caveats
+
+- **No reverse/void feature.** Earlier versions had a commission feature and a void/reversal flow;
+  both were removed in migrations `20260902020000_remove_commission` and
+  `20260902040000_remove_void`. Corrections are done by **editing** collections/disbursements.
+- **No automated tests** are configured in this repo.
+- Keep `CLOUDINARY_API_SECRET` and `JWT_SECRET` out of the repo — set them via environment
+  variables / Vercel secrets / GitHub secrets.
+- `link-view-app/` is an unused `create-expo-app` boilerplate and not part of the product.
