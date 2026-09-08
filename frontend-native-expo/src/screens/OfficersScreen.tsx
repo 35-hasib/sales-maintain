@@ -83,7 +83,7 @@ export default function OfficersScreen() {
         <Card style={{ marginBottom: 12 }}>
           <CardTitle>{editing ? "সম্পাদনা" : "নতুন কর্মকর্তা"}</CardTitle>
           <Field label="নাম *"><Input value={formName} onChangeText={setFormName} /></Field>
-          <Field label="মোবাইল নম্বর"><Input value={formPhone} onChangeText={setFormPhone} keyboardType="phone-pad" /></Field>
+          <Field label="মোবাইল নম্বর"><Input value={formPhone} onChangeText={(t) => setFormPhone(t.replace(/[^0-9]/g, ""))} keyboardType="number-pad" maxLength={11} /></Field>
           <Field label="ইমেইল"><Input value={formEmail} onChangeText={setFormEmail} keyboardType="email-address" autoCapitalize="none" /></Field>
           <Text style={{ fontSize: 11, color: "#94a3b8", marginBottom: 6 }}>ইমেইল বা মোবাইল নম্বর — যেকোনো একটি দিতে হবে</Text>
           <Field label={editing ? "পাসওয়ার্ড (খালি রাখলে অপরিবর্তিত)" : "পাসওয়ার্ড *"}><Input value={formPassword} onChangeText={setFormPassword} secureTextEntry /></Field>

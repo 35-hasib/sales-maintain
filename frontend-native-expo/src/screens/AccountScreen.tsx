@@ -78,7 +78,7 @@ export default function AccountScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 16, paddingTop: 8, paddingBottom: 24 }}>
-      <Text style={styles.heading}>আমার হিসাব</Text>
+      <Text style={styles.heading}>প্রোফাইল</Text>
       {error ? <ErrorText message={error} /> : null}
       {msg ? (
         <View style={{ backgroundColor: "#ecfdf5", borderWidth: 1, borderColor: "#a7f3d0", borderRadius: 10, padding: 10, marginBottom: 10 }}>
@@ -89,7 +89,7 @@ export default function AccountScreen() {
       <Card style={{ marginBottom: 12 }}>
         <CardTitle>প্রোফাইল</CardTitle>
         <Field label="নাম *"><Input value={formName} onChangeText={setFormName} /></Field>
-        <Field label="মোবাইল নম্বর"><Input value={formPhone} onChangeText={setFormPhone} keyboardType="phone-pad" /></Field>
+        <Field label="মোবাইল নম্বর"><Input value={formPhone} onChangeText={(t) => setFormPhone(t.replace(/[^0-9]/g, ""))} keyboardType="number-pad" maxLength={11} /></Field>
         <Field label="ইমেইল"><Input value={formEmail} onChangeText={setFormEmail} keyboardType="email-address" autoCapitalize="none" /></Field>
         <Text style={{ fontSize: 11, color: "#94a3b8", marginBottom: 12 }}>ইমেইল বা মোবাইল নম্বর — যেকোনো একটি দিতে হবে</Text>
         <Field label="নতুন পাসওয়ার্ড (খালি রাখলে অপরিবর্তিত)"><Input value={formPassword} onChangeText={setFormPassword} secureTextEntry /></Field>
@@ -97,7 +97,7 @@ export default function AccountScreen() {
       </Card>
 
       <Card style={{ marginBottom: 12 }}>
-        <CardTitle>হিসাবের তথ্য</CardTitle>
+        <CardTitle>প্রোফাইলের তথ্য</CardTitle>
         <View style={styles.row}>
           <Text style={styles.rowLabel}>ভূমিকা</Text>
           <View style={{ backgroundColor: "#f1f5f9", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999 }}>

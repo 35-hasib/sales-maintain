@@ -21,7 +21,7 @@ const navItems = [
   { to: "/transactions", label: "লেনদেন", icon: "receipt", roles: ["officer"] },
   { to: "/dealers", label: "ব্যবসায়ী", icon: "store", roles: ["officer"] },
   { to: "/ledger", label: "খাতা", icon: "ledger", roles: ["officer"] },
-  { to: "/account", label: "আমার হিসাব", icon: "person", roles: ["officer"] },
+  { to: "/account", label: "প্রোফাইল", icon: "person", roles: ["officer"] },
   { to: "/officers", label: "কর্মকর্তা", icon: "person", roles: ["admin"] },
 ];
 

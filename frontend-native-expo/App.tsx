@@ -84,7 +84,7 @@ function OfficerTabs() {
       {isAdmin ? (
         <Tab.Screen name="Officers" component={OfficersScreen} options={{ title: "কর্মকর্তা", tabBarLabel: "কর্মকর্তা", tabBarIcon: ({ color }) => <TabIcon name="person" color={color} /> }} />
       ) : (
-        <Tab.Screen name="Account" component={AccountScreen} options={{ title: "হিসাব", tabBarLabel: "হিসাব", tabBarIcon: ({ color }) => <TabIcon name="account-circle" color={color} /> }} />
+        <Tab.Screen name="Account" component={AccountScreen} options={{ title: "প্রোফাইল", tabBarLabel: "প্রোফাইল", tabBarIcon: ({ color }) => <TabIcon name="account-circle" color={color} /> }} />
       )}
     </Tab.Navigator>
   );

@@ -75,7 +75,7 @@ export default function Account() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold">আমার হিসাব</h1>
+      <h1 className="text-xl font-bold">প্রোফাইল</h1>
 
       {error && <ErrorText message={error} />}
       {msg && (
@@ -109,7 +109,7 @@ export default function Account() {
       </Card>
 
       <Card>
-        <CardTitle>হিসাবের তথ্য</CardTitle>
+        <CardTitle>প্রোফাইলের তথ্য</CardTitle>
         <dl className="divide-y divide-slate-100 text-sm">
           <div className="py-2 flex items-center justify-between gap-2">
             <dt className="text-slate-500">ভূমিকা</dt>
