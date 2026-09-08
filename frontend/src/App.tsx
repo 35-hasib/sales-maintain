@@ -12,6 +12,7 @@ import TransactionDetail from "./pages/TransactionDetail";
 import NewTransaction from "./pages/NewTransaction";
 import Ledger from "./pages/Ledger";
 import Officers from "./pages/Officers";
+import Account from "./pages/Account";
 
 function RequireAuth({ children }: { children: ReactElement }) {
   const { officer, loading } = useAuth();
@@ -39,6 +40,7 @@ export default function App() {
         }
       >
         <Route path="/officers" element={<Officers />} />
+        <Route path="/account" element={<Account />} />
         {/* Business tabs are officer-only; admin is redirected to /officers */}
         <Route
           path="/"

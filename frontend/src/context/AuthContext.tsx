@@ -7,6 +7,7 @@ type Officer = {
   email: string | null;
   phone: string | null;
   role: string;
+  createdAt?: string;
 };
 
 type AuthState = {
@@ -14,6 +15,7 @@ type AuthState = {
   loading: boolean;
   login: (identifier: string, password: string) => Promise<Officer>;
   logout: () => void;
+  updateOfficer: (o: Officer) => void;
 };
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
@@ -52,8 +54,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setOfficer(null);
   }
 
+  function updateOfficer(o: Officer) {
+    setOfficer(o);
+  }
+
   return (
-    <AuthContext.Provider value={{ officer, loading, login, logout }}>
+    <AuthContext.Provider value={{ officer, loading, login, logout, updateOfficer }}>
       {children}
     </AuthContext.Provider>
   );
