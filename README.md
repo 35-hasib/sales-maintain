@@ -130,8 +130,8 @@ Seed logins (printed by the seed script) — officers can sign in with **email o
 
 | Email | Mobile | Password | Role |
 |-------|--------|----------|------|
-| admin@salesmaintain.test | 01711111111 | admin123 | admin |
-| officer@salesmaintain.test | 01722222222 | officer123 | officer |
+| admin@************** | 017******** | ******** | admin |
+| officer@************ | 017******** | ******** | officer |
 
 ## Getting started (frontend)
 
