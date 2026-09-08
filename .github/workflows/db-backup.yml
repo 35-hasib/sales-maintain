@@ -4,7 +4,7 @@ on:
   schedule:
     # Everyday at 06:00 UTC
     # Bangladesh time = 12:00 PM
-    - cron: "0 6 * * *"
+    - cron: "0 6 */2 * *"
 
   workflow_dispatch:
 
