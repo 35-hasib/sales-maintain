@@ -12,8 +12,5 @@
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index.js" },
     { "source": "/((?!api|assets/).*)", "destination": "/index.html" }
-  ],
-  "crons": [
-    { "path": "/api/health", "schedule": "*/5 * * * *" }
   ]
 }
