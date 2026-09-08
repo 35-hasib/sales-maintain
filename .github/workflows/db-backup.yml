@@ -6,10 +6,8 @@ on:
     # Bangladesh time = 12:00 PM
     - cron: "0 6 * * 0"
 
-  # Manual backup option
   workflow_dispatch:
 
-# We don't need write access to the repository
 permissions:
   contents: read
 
@@ -51,7 +49,7 @@ jobs:
 
 
       # ==================================================
-      # 3. Verify PostgreSQL version
+      # 3. Check PostgreSQL version
       # ==================================================
       - name: Check pg_dump version
         run: |
@@ -59,11 +57,12 @@ jobs:
 
 
       # ==================================================
-      # 4. Create compressed database backup
+      # 4. Create database backup
       # ==================================================
       - name: Create database backup
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
         run: |
           set -e
 
@@ -84,12 +83,23 @@ jobs:
 
 
       # ==================================================
-      # 5. Install AWS CLI
+      # 5. Install AWS CLI v2
       # ==================================================
-      - name: Install AWS CLI
+      - name: Install AWS CLI v2
         run: |
+          set -e
+
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" \
+            -o "awscliv2.zip"
+
           sudo apt-get update
-          sudo apt-get install -y awscli
+          sudo apt-get install -y unzip
+
+          unzip -q awscliv2.zip
+
+          sudo ./aws/install
+
+          aws --version
 
 
       # ==================================================
@@ -122,7 +132,7 @@ jobs:
 
 
       # ==================================================
-      # 7. Verify backup exists in R2
+      # 7. Verify backup
       # ==================================================
       - name: Verify R2 backup
         env:
@@ -138,7 +148,7 @@ jobs:
 
           R2_ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
 
-          echo "Current backups in R2:"
+          echo "Backups currently stored in R2:"
 
           aws s3 ls \
             "s3://${R2_BUCKET_NAME}/" \
@@ -173,7 +183,6 @@ jobs:
             --output text |
           while read -r KEY LAST_MODIFIED; do
 
-            # Skip empty entries
             if [ -z "$KEY" ]; then
               continue
             fi
@@ -202,5 +211,7 @@ jobs:
         if: always()
         run: |
           rm -rf backups
+          rm -rf aws
+          rm -f awscliv2.zip
 
-          echo "Local backup removed."
+          echo "Temporary backup files removed."
