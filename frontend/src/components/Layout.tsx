@@ -45,6 +45,7 @@ export default function Layout() {
       <header className="bg-emerald-700 text-white shadow sticky top-0 z-20">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
+            <img src="/logo.png" alt="SalesMaintain" className="h-8 w-8 rounded-lg object-cover" />
             <span className="text-xl font-bold">SalesMaintain</span>
           </div>
           <div className="flex items-center gap-3 text-sm">

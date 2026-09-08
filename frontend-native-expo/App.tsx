@@ -18,6 +18,7 @@ import DealersScreen from "./src/screens/DealersScreen";
 import DealerDetailScreen from "./src/screens/DealerDetailScreen";
 import LedgerScreen from "./src/screens/LedgerScreen";
 import OfficersScreen from "./src/screens/OfficersScreen";
+import AccountScreen from "./src/screens/AccountScreen";
 import { C, SheetModal, Button } from "./src/components/Themed";
 
 const Stack = createNativeStackNavigator();
@@ -80,7 +81,11 @@ function OfficerTabs() {
           <Tab.Screen name="Ledger" component={LedgerScreen} options={{ title: "খাতা", tabBarLabel: "খাতা", tabBarIcon: ({ color }) => <TabIcon name="menu-book" color={color} /> }} />
         </>
       ) : null}
-      <Tab.Screen name="Officers" component={OfficersScreen} options={{ title: "কর্মকর্তা", tabBarLabel: "কর্মকর্তা", tabBarIcon: ({ color }) => <TabIcon name="person" color={color} /> }} />
+      {isAdmin ? (
+        <Tab.Screen name="Officers" component={OfficersScreen} options={{ title: "কর্মকর্তা", tabBarLabel: "কর্মকর্তা", tabBarIcon: ({ color }) => <TabIcon name="person" color={color} /> }} />
+      ) : (
+        <Tab.Screen name="Account" component={AccountScreen} options={{ title: "হিসাব", tabBarLabel: "হিসাব", tabBarIcon: ({ color }) => <TabIcon name="account-circle" color={color} /> }} />
+      )}
     </Tab.Navigator>
   );
 }

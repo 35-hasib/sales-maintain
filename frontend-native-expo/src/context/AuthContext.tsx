@@ -8,6 +8,7 @@ type Officer = {
   email: string | null;
   phone: string | null;
   role: string;
+  createdAt?: string;
 };
 
 type AuthState = {
@@ -17,6 +18,7 @@ type AuthState = {
   retryStartup: () => void;
   login: (identifier: string, password: string) => Promise<Officer>;
   logout: () => void;
+  updateOfficer: (o: Officer) => void;
 };
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
@@ -76,8 +78,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setOfficer(null);
   }, []);
 
+  const updateOfficer = useCallback((o: Officer) => setOfficer(o), []);
+
   return (
-    <AuthContext.Provider value={{ officer, loading, startupError, retryStartup: restore, login, logout }}>
+    <AuthContext.Provider value={{ officer, loading, startupError, retryStartup: restore, login, logout, updateOfficer }}>
       {children}
     </AuthContext.Provider>
   );

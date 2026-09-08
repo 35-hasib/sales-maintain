@@ -28,10 +28,13 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-slate-100">
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 w-full max-w-sm">
-        <h1 className="text-2xl font-bold text-center text-emerald-700">SalesMaintain</h1>
-        <p className="text-center text-sm text-slate-500 mt-1 mb-6">
-          টাকার হিসাব · {new Date().getFullYear()}
-        </p>
+        <div className="flex flex-col items-center mb-6">
+          <img src="/logo.png" alt="SalesMaintain" className="h-20 w-20 rounded-2xl object-cover mb-3" />
+          <h1 className="text-2xl font-bold text-emerald-700">SalesMaintain</h1>
+          <p className="text-center text-sm text-slate-500 mt-1">
+            টাকার হিসাব · {new Date().getFullYear()}
+          </p>
+        </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Field label="ইমেইল বা মোবাইল">
             <Input

@@ -47,8 +47,17 @@ router.post("/login", async (req, res, next) => {
   }
 });
 
-router.get("/me", authRequired, async (req, res) => {
-  res.json({ officer: req.officer });
+router.get("/me", authRequired, async (req, res, next) => {
+  try {
+    const officer = await prisma.officer.findUnique({
+      where: { id: req.officer.id },
+      select: { id: true, name: true, email: true, phone: true, role: true, createdAt: true },
+    });
+    if (!officer) return res.status(401).json({ error: "Account no longer exists" });
+    res.json({ officer });
+  } catch (e) {
+    next(e);
+  }
 });
 
 // --- Officer management (admin only) ---
@@ -126,13 +135,20 @@ const updateOfficerSchema = z
   })
   .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
 
-router.put("/:id", authRequired, requireRole("admin"), async (req, res, next) => {
+router.put("/:id", authRequired, async (req, res, next) => {
   try {
+    // Admins may update anyone; officers may only update their own account.
+    if (req.officer.role !== "admin" && req.officer.id !== req.params.id) {
+      return res.status(403).json({ error: "Insufficient permissions" });
+    }
     const parsed = updateOfficerSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
     }
     const { name, email, phone, password, role } = parsed.data;
+    if (role !== undefined && req.officer.role !== "admin") {
+      return res.status(403).json({ error: "Only an admin can change the role" });
+    }
     const exists = await prisma.officer.findUnique({ where: { id: req.params.id } });
     if (!exists) return res.status(404).json({ error: "Officer not found" });
 
@@ -172,15 +188,19 @@ router.put("/:id", authRequired, requireRole("admin"), async (req, res, next) =>
   }
 });
 
-router.delete("/:id", authRequired, requireRole("admin"), async (req, res, next) => {
+router.delete("/:id", authRequired, async (req, res, next) => {
   try {
+    // Admins may delete anyone (except themselves); officers may delete only their own account.
+    if (req.officer.role !== "admin" && req.officer.id !== req.params.id) {
+      return res.status(403).json({ error: "Insufficient permissions" });
+    }
     const target = await prisma.officer.findUnique({
       where: { id: req.params.id },
       select: { id: true, name: true, email: true, phone: true, role: true, createdAt: true },
     });
     if (!target) return res.status(404).json({ error: "Officer not found" });
 
-    if (target.id === req.officer.id) {
+    if (target.id === req.officer.id && target.role === "admin") {
       return res.status(400).json({ error: "You cannot delete your own account" });
     }
 
