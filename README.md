@@ -264,11 +264,16 @@ All endpoints except `/health` and `/api/auth/login` require an `Authorization: 
 
 Both the frontend and backend deploy from the **same repo** to the **same Vercel project**, so the
 web app and API share one domain. `vercel.json`:
-- `installCommand` — installs root + backend deps, runs `prisma generate` and `prisma migrate deploy`
+- `installCommand` — installs root + backend deps, runs `prisma generate` (no DB connection needed)
 - `buildCommand` — builds the frontend into `frontend/dist`
 - region `sin1` (Singapore); `/api/(.*)` served through the `api/index.js` serverless Express
   function (`maxDuration: 10`); other routes rewritten to `index.html` (React Router SPA behavior)
 - a **cron** hits `/api/health` every 5 minutes to keep the function/DB connection warm
+
+> **Migrations are NOT run on deploy.** Prisma Migrate uses PG advisory locks, which don't work
+> through Neon's pooled (PGBouncer) connection — running `prisma migrate deploy` on Vercel against
+> the pooled URL fails with `P1002` / `pg_advisory_lock` timeout. Instead, apply migrations **once,
+> manually**, from your computer using Neon's **direct** (non-pooled) connection string.
 
 ### Step 1 — Create a free PostgreSQL on Neon
 
@@ -296,9 +301,27 @@ web app and API share one domain. `vercel.json`:
 
    > Do **not** set `VITE_API_BASE` — the frontend calls `/api` on the same domain.
 
-4. Click **Deploy** — `vercel.json` installs backend deps, runs Prisma migrations/generate, builds
-   the frontend into `frontend/dist`, serves `/api/*` through the serverless Express function, and
+4. Click **Deploy** — `vercel.json` installs backend deps, runs `prisma generate`, builds the
+   frontend into `frontend/dist`, serves `/api/*` through the serverless Express function, and
    rewrites all other routes to `index.html`.
+
+### Step 3 — Run database migrations once
+
+Vercel has no "start" step and migrations are intentionally **not** part of the deploy, so run
+them once from your computer using Neon's **direct** connection string:
+
+```bash
+cd backend
+DATABASE_URL="<your-neon-DIRECT-url>" npx prisma migrate deploy
+DATABASE_URL="<your-neon-DIRECT-url>" npx prisma db seed
+```
+
+> **Why NOT the pooled URL:** Vercel's `DATABASE_URL` env var is Neon's **pooled** (PGBouncer)
+> connection so the app doesn't exhaust the connection limit. But Prisma Migrate holds PG
+> **advisory locks** during a run — those locks don't survive PGBouncer, so `migrate deploy` against
+> the pooled URL times out with a `P1002` error. Get the **direct** connection string from the
+> Neon dashboard (Connect → **Direct**, or remove `-pooler` from the hostname) and use it only for
+> the migration/seed commands, not for the app.
 
 ### Verifying the API
 
