@@ -1,60 +1,206 @@
-name: Database backup
+name: Database Backup
 
 on:
   schedule:
+    # Every Sunday at 06:00 UTC
+    # Bangladesh time = 12:00 PM
     - cron: "0 6 * * 0"
+
+  # Manual backup option
   workflow_dispatch:
 
+# We don't need write access to the repository
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   backup:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
 
+      # ==================================================
+      # 1. Checkout repository
+      # ==================================================
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+
+      # ==================================================
+      # 2. Install PostgreSQL 18 client
+      # ==================================================
       - name: Install PostgreSQL 18 client
         run: |
           sudo apt-get update
-          sudo apt-get install -y curl ca-certificates gnupg
+
+          sudo apt-get install -y \
+            curl \
+            ca-certificates \
+            gnupg
 
           curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
-            | sudo gpg --dearmor -o /usr/share/keyrings/postgresql.gpg
+            | sudo gpg --dearmor \
+            -o /usr/share/keyrings/postgresql.gpg
 
           echo "deb [signed-by=/usr/share/keyrings/postgresql.gpg] http://apt.postgresql.org/pub/repos/apt noble-pgdg main" \
             | sudo tee /etc/apt/sources.list.d/pgdg.list
 
           sudo apt-get update
+
           sudo apt-get install -y postgresql-client-18
 
-      - name: Check PostgreSQL version
+
+      # ==================================================
+      # 3. Verify PostgreSQL version
+      # ==================================================
+      - name: Check pg_dump version
         run: |
           /usr/lib/postgresql/18/bin/pg_dump --version
 
-      - name: Dump database
+
+      # ==================================================
+      # 4. Create compressed database backup
+      # ==================================================
+      - name: Create database backup
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
+          set -e
+
           mkdir -p backups
+
+          BACKUP_FILE="backups/salesmaintain-$(date +%Y%m%d-%H%M%S).sql.gz"
+
+          echo "Creating database backup..."
 
           /usr/lib/postgresql/18/bin/pg_dump \
             --no-owner \
+            --no-acl \
             "$DATABASE_URL" \
-            > "backups/salesmaintain-$(date +%Y%m%d).sql"
+            | gzip > "$BACKUP_FILE"
 
-      - name: Commit and push backup
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          echo "Backup created successfully:"
+          ls -lh "$BACKUP_FILE"
+
+
+      # ==================================================
+      # 5. Install AWS CLI
+      # ==================================================
+      - name: Install AWS CLI
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          sudo apt-get update
+          sudo apt-get install -y awscli
 
-          git add backups/
 
-          git commit \
-            -m "chore: database backup $(date +%Y-%m-%d)" \
-            || echo "No changes to commit"
+      # ==================================================
+      # 6. Upload backup to Cloudflare R2
+      # ==================================================
+      - name: Upload backup to Cloudflare R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
 
-          git push
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+
+        run: |
+          set -e
+
+          BACKUP_FILE=$(find backups -type f -name "*.sql.gz" | head -n 1)
+
+          R2_ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+
+          echo "Uploading backup to Cloudflare R2..."
+
+          aws s3 cp \
+            "$BACKUP_FILE" \
+            "s3://${R2_BUCKET_NAME}/" \
+            --endpoint-url "$R2_ENDPOINT"
+
+          echo "Backup uploaded successfully."
+
+
+      # ==================================================
+      # 7. Verify backup exists in R2
+      # ==================================================
+      - name: Verify R2 backup
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+
+        run: |
+          set -e
+
+          R2_ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+
+          echo "Current backups in R2:"
+
+          aws s3 ls \
+            "s3://${R2_BUCKET_NAME}/" \
+            --endpoint-url "$R2_ENDPOINT"
+
+
+      # ==================================================
+      # 8. Delete backups older than 30 days
+      # ==================================================
+      - name: Delete backups older than 30 days
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+
+        run: |
+          set -e
+
+          R2_ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+
+          CUTOFF_DATE=$(date -d "30 days ago" +%s)
+
+          echo "Deleting backups older than 30 days..."
+
+          aws s3api list-objects-v2 \
+            --bucket "$R2_BUCKET_NAME" \
+            --endpoint-url "$R2_ENDPOINT" \
+            --query 'Contents[].{Key:Key,LastModified:LastModified}' \
+            --output text |
+          while read -r KEY LAST_MODIFIED; do
+
+            # Skip empty entries
+            if [ -z "$KEY" ]; then
+              continue
+            fi
+
+            FILE_DATE=$(date -d "$LAST_MODIFIED" +%s)
+
+            if [ "$FILE_DATE" -lt "$CUTOFF_DATE" ]; then
+
+              echo "Deleting old backup: $KEY"
+
+              aws s3 rm \
+                "s3://${R2_BUCKET_NAME}/${KEY}" \
+                --endpoint-url "$R2_ENDPOINT"
+
+            fi
+
+          done
+
+          echo "Old backup cleanup completed."
+
+
+      # ==================================================
+      # 9. Remove temporary backup from GitHub runner
+      # ==================================================
+      - name: Remove local backup
+        if: always()
+        run: |
+          rm -rf backups
+
+          echo "Local backup removed."
