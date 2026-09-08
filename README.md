@@ -133,9 +133,6 @@ Seed logins (printed by the seed script):
 | admin@salesmaintain.test | admin123 | admin |
 | officer@salesmaintain.test | officer123 | officer |
 
-`prisma migrate deploy` applies the existing migrations and also creates the `transaction_summary`
-view and the status trigger (they live in `20260902000000_init/migration.sql`).
-
 ## Getting started (frontend)
 
 ```bash
