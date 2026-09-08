@@ -5,9 +5,9 @@ import type { Officer } from "../lib/types";
 import { Card, CardTitle, Button, Input, Field, Select, ErrorText, Pagination, Spinner } from "../components/ui";
 import { formatDate } from "../lib/format";
 
-type FormState = { name: string; email: string; password: string; role: string };
+type FormState = { name: string; email: string; phone: string; password: string; role: string };
 
-const emptyForm: FormState = { name: "", email: "", password: "", role: "officer" };
+const emptyForm: FormState = { name: "", email: "", phone: "", password: "", role: "officer" };
 
 const roleLabel = (role: string) => (role === "admin" ? "অ্যাডমিন" : "কর্মকর্তা");
 
@@ -51,7 +51,7 @@ export default function Officers() {
 
   function openEdit(o: Officer) {
     setEditing(o);
-    setForm({ name: o.name, email: o.email, password: "", role: o.role });
+    setForm({ name: o.name, email: o.email ?? "", phone: o.phone ?? "", password: "", role: o.role });
     setShowForm(true);
     setError("");
   }
@@ -61,11 +61,28 @@ export default function Officers() {
     setBusy(true);
     setError("");
     try {
-      const payload: Record<string, string> = { name: form.name, email: form.email, role: form.role };
+      const payload: Record<string, string | null> = { name: form.name, role: form.role };
+      if (form.email.trim()) payload.email = form.email.trim();
+      if (form.phone.trim()) payload.phone = form.phone.trim();
       if (form.password) payload.password = form.password;
       if (editing) {
+        if (form.phone.trim() === "" && form.email.trim() === "") {
+          setError("ইমেইল বা মোবাইল নম্বর দিতে হবে");
+          setBusy(false);
+          return;
+        }
         await api.put(`/api/auth/${editing.id}`, payload);
       } else {
+        if (!payload.email && !payload.phone) {
+          setError("ইমেইল বা মোবাইল নম্বর দিতে হবে");
+          setBusy(false);
+          return;
+        }
+        if (!form.password) {
+          setError("নতুন কর্মকর্তার জন্য পাসওয়ার্ড প্রয়োজন");
+          setBusy(false);
+          return;
+        }
         payload.password = form.password;
         await api.post("/api/auth/", payload);
       }
@@ -117,9 +134,13 @@ export default function Officers() {
             <Field label="নাম *">
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
             </Field>
-            <Field label="ইমেইল *">
-              <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+            <Field label="মোবাইল নম্বর">
+              <Input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="017XXXXXXXX" />
             </Field>
+            <Field label="ইমেইল">
+              <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="hello@example.com" />
+            </Field>
+            <p className="text-xs text-slate-400 -mt-1">ইমেইল বা মোবাইল নম্বর — যেকোনো একটি দিতে হবে</p>
             <Field label={editing ? "পাসওয়ার্ড (অপরিবর্তিত রাখতে খালি রাখুন)" : "পাসওয়ার্ড *"}>
               <Input
                 type="password"
@@ -158,7 +179,7 @@ export default function Officers() {
             <li key={o.id} className="py-3 flex items-center justify-between gap-2">
               <div>
                 <div className="font-medium text-sm">{o.name}</div>
-                <div className="text-xs text-slate-500">{o.email}</div>
+                <div className="text-xs text-slate-500">{o.email ?? o.phone ?? "—"}</div>
               </div>
               <div className="flex items-center gap-2">
                 <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 capitalize">

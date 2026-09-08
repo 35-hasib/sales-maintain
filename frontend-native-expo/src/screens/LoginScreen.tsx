@@ -6,7 +6,7 @@ import { Footer } from "../components/Themed";
 
 export default function LoginScreen() {
   const { login } = useAuth();
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -15,7 +15,7 @@ export default function LoginScreen() {
     setBusy(true);
     setError("");
     try {
-      await login(email, password);
+      await login(identifier, password);
     } catch (err: any) {
       setError(err?.message || "লগইন ব্যর্থ হয়েছে");
     } finally {
@@ -30,7 +30,7 @@ export default function LoginScreen() {
         <View style={styles.card}>
           <Text style={styles.title}>SalesMaintain</Text>
           <Text style={styles.subtitle}>টাকার হিসাব · {new Date().getFullYear()}</Text>
-          <TextInput style={styles.input} placeholder="ইমেইল" placeholderTextColor="#94a3b8" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+          <TextInput style={styles.input} placeholder="ইমেইল বা মোবাইল" placeholderTextColor="#94a3b8" value={identifier} onChangeText={setIdentifier} autoCapitalize="none" />
           <TextInput style={styles.input} placeholder="পাসওয়ার্ড" placeholderTextColor="#94a3b8" value={password} onChangeText={setPassword} secureTextEntry />
           {error ? <View style={styles.errorBox}><Text style={styles.errorText}>{error}</Text></View> : null}
           <TouchableOpacity style={styles.btn} onPress={handleLogin} disabled={busy}>

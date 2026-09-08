@@ -6,7 +6,7 @@ import { Button, Input, Field, ErrorText, Spinner } from "../components/ui";
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -16,7 +16,7 @@ export default function Login() {
     setBusy(true);
     setError("");
     try {
-      const officer = await login(email, password);
+      const officer = await login(identifier, password);
       navigate(officer.role === "admin" ? "/officers" : "/");
     } catch (err: any) {
       setError(err?.message || "লগইন ব্যর্থ হয়েছে");
@@ -33,12 +33,13 @@ export default function Login() {
           টাকার হিসাব · {new Date().getFullYear()}
         </p>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Field label="ইমেইল">
+          <Field label="ইমেইল বা মোবাইল">
             <Input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="আপনারইমেইল@example.com"
+              type="text"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              placeholder="hello@example.com অথবা 017XXXXXXXX"
+              autoComplete="username"
               required
             />
           </Field>

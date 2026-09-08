@@ -44,7 +44,8 @@ export type LedgerEntry = {
 export type Officer = {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
+  phone: string | null;
   role: string;
   createdAt?: string;
 };

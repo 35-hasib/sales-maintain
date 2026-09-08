@@ -4,14 +4,15 @@ import { api, getToken, setToken, clearToken } from "../lib/api";
 type Officer = {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
+  phone: string | null;
   role: string;
 };
 
 type AuthState = {
   officer: Officer | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<Officer>;
+  login: (identifier: string, password: string) => Promise<Officer>;
   logout: () => void;
 };
 
@@ -36,9 +37,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
-  async function login(email: string, password: string): Promise<Officer> {
+  async function login(identifier: string, password: string): Promise<Officer> {
     const d = await api.post<{ token: string; officer: Officer }>("/api/auth/login", {
-      email,
+      identifier,
       password,
     });
     setToken(d.token);

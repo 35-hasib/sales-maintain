@@ -126,12 +126,12 @@ npm run seed              # sample officers, dealers and transactions
 npm run dev               # starts API on http://localhost:4000
 ```
 
-Seed logins (printed by the seed script):
+Seed logins (printed by the seed script) — officers can sign in with **email or mobile number**:
 
-| Email | Password | Role |
-|-------|----------|------|
-| admin@salesmaintain.test | admin123 | admin |
-| officer@salesmaintain.test | officer123 | officer |
+| Email | Mobile | Password | Role |
+|-------|--------|----------|------|
+| admin@salesmaintain.test | 01711111111 | admin123 | admin |
+| officer@salesmaintain.test | 01722222222 | officer123 | officer |
 
 ## Getting started (frontend)
 
@@ -215,7 +215,7 @@ All business routes use `officerOnly` (bearer token required); officer managemen
 | Method | Path | Description | Access |
 |---|---|---|---|
 | GET | `/health` | DB connectivity check (used by the Vercel warm-up cron) | none |
-| POST | `/api/auth/login` | Login → JWT + officer | none |
+| POST | `/api/auth/login` | Login via email **or** mobile number → JWT + officer | none |
 | GET | `/api/auth/me` | Current officer | bearer |
 | GET / POST | `/api/auth/` | List (paginated) / create officers | admin |
 | PUT / DELETE | `/api/auth/:id` | Update / delete officer | admin |

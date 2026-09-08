@@ -20,6 +20,7 @@ export default function OfficersScreen() {
   const [editing, setEditing] = useState<Officer | null>(null);
   const [formName, setFormName] = useState("");
   const [formEmail, setFormEmail] = useState("");
+  const [formPhone, setFormPhone] = useState("");
   const [formPassword, setFormPassword] = useState("");
   const [formRole, setFormRole] = useState("officer");
   const [busy, setBusy] = useState(false);
@@ -36,17 +37,21 @@ export default function OfficersScreen() {
 
   useEffect(() => { if (isAdmin) load(); }, [isAdmin, page]);
 
-  function openNew() { setEditing(null); setFormName(""); setFormEmail(""); setFormPassword(""); setFormRole("officer"); setShowForm(true); }
-  function openEdit(o: Officer) { setEditing(o); setFormName(o.name); setFormEmail(o.email); setFormPassword(""); setFormRole(o.role); setShowForm(true); }
+  function openNew() { setEditing(null); setFormName(""); setFormEmail(""); setFormPhone(""); setFormPassword(""); setFormRole("officer"); setShowForm(true); }
+  function openEdit(o: Officer) { setEditing(o); setFormName(o.name); setFormEmail(o.email ?? ""); setFormPhone(o.phone ?? ""); setFormPassword(""); setFormRole(o.role); setShowForm(true); }
 
   async function handleSubmit() {
     setBusy(true); setError("");
     try {
-      const payload: Record<string, string> = { name: formName, email: formEmail, role: formRole };
+      const payload: Record<string, string | null> = { name: formName, role: formRole };
+      if (formEmail.trim()) payload.email = formEmail.trim();
+      if (formPhone.trim()) payload.phone = formPhone.trim();
       if (editing) {
+        if (formEmail.trim() === "" && formPhone.trim() === "") { setError("ইমেইল বা মোবাইল নম্বর দিতে হবে"); setBusy(false); return; }
         if (formPassword) payload.password = formPassword;
         await api.put(`/api/auth/${editing.id}`, payload);
       } else {
+        if (!payload.email && !payload.phone) { setError("ইমেইল বা মোবাইল নম্বর দিতে হবে"); setBusy(false); return; }
         if (!formPassword) { setError("নতুন কর্মকর্তার জন্য পাসওয়ার্ড প্রয়োজন।"); setBusy(false); return; }
         payload.password = formPassword;
         await api.post("/api/auth/", payload);
@@ -78,7 +83,9 @@ export default function OfficersScreen() {
         <Card style={{ marginBottom: 12 }}>
           <CardTitle>{editing ? "সম্পাদনা" : "নতুন কর্মকর্তা"}</CardTitle>
           <Field label="নাম *"><Input value={formName} onChangeText={setFormName} /></Field>
-          <Field label="ইমেইল *"><Input value={formEmail} onChangeText={setFormEmail} keyboardType="email-address" autoCapitalize="none" /></Field>
+          <Field label="মোবাইল নম্বর"><Input value={formPhone} onChangeText={setFormPhone} keyboardType="phone-pad" /></Field>
+          <Field label="ইমেইল"><Input value={formEmail} onChangeText={setFormEmail} keyboardType="email-address" autoCapitalize="none" /></Field>
+          <Text style={{ fontSize: 11, color: "#94a3b8", marginBottom: 6 }}>ইমেইল বা মোবাইল নম্বর — যেকোনো একটি দিতে হবে</Text>
           <Field label={editing ? "পাসওয়ার্ড (খালি রাখলে অপরিবর্তিত)" : "পাসওয়ার্ড *"}><Input value={formPassword} onChangeText={setFormPassword} secureTextEntry /></Field>
           <Field label="ভূমিকা"><PickerSelect value={formRole} onValueChange={setFormRole} items={ROLE_ITEMS} /></Field>
           <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
@@ -95,7 +102,7 @@ export default function OfficersScreen() {
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 14, fontWeight: "600" }}>{o.name}</Text>
-                <Text style={{ fontSize: 12, color: "#64748b" }}>{o.email}</Text>
+                <Text style={{ fontSize: 12, color: "#64748b" }}>{o.email ?? o.phone ?? "—"}</Text>
                 {o.createdAt ? <Text style={{ fontSize: 11, color: "#94a3b8" }}>যোগ: {formatDate(o.createdAt)}</Text> : null}
               </View>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>

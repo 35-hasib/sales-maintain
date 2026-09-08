@@ -5,7 +5,8 @@ import { clearAppCache } from "../lib/cache";
 type Officer = {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
+  phone: string | null;
   role: string;
 };
 
@@ -14,7 +15,7 @@ type AuthState = {
   loading: boolean;
   startupError: string | null;
   retryStartup: () => void;
-  login: (email: string, password: string) => Promise<Officer>;
+  login: (identifier: string, password: string) => Promise<Officer>;
   logout: () => void;
 };
 
@@ -59,9 +60,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     restore();
   }, [restore]);
 
-  async function login(email: string, password: string): Promise<Officer> {
+  async function login(identifier: string, password: string): Promise<Officer> {
     const d = await api.post<{ token: string; officer: Officer }>("/api/auth/login", {
-      email,
+      identifier,
       password,
     });
     await setToken(d.token);
