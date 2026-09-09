@@ -13,4 +13,4 @@ jobs:
       - name: Ping backend
         run: |
           curl -f --max-time 30 \
-            https://sales-maintain-iis1.vercel.app/api/health
+            https://sales-maintain-iis1.vercel.app/health
