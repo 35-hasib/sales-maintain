@@ -2,7 +2,7 @@ name: Backend Keep Alive
 
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "3,13,23,33,43,53 * * * *"
   workflow_dispatch:
 
 jobs:
@@ -13,4 +13,4 @@ jobs:
       - name: Ping backend
         run: |
           curl -f --max-time 30 \
-            https://sales-maintain-iis1.vercel.app/api/health
+            https://sales-maintain-iisi1.vercel.app/api/health
