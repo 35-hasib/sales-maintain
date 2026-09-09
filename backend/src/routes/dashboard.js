@@ -28,7 +28,8 @@ router.get("/", async (req, res, next) => {
       prisma.$queryRawUnsafe(
         `SELECT s.* FROM transaction_summary s
          WHERE s.officer_id = $1::uuid AND s.status <> 'settled'
-         ORDER BY s.transaction_date ASC, s.created_at ASC`,
+         ORDER BY s.transaction_date ASC, s.created_at ASC
+         LIMIT 200`,
         req.officer.id
       ),
       prisma.$queryRawUnsafe(

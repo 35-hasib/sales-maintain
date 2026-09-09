@@ -30,6 +30,24 @@ export class ApiTimeoutError extends Error {}
 export class ApiNetworkError extends Error {}
 
 const REQUEST_TIMEOUT_MS = 30000;
+// Cold-start requests on serverless hosts can exceed the first attempt's
+// budget, but succeed on a warm retry. Retry GETs (idempotent) with backoff.
+const MAX_RETRIES = 2;
+const RETRY_DELAY_MS = 1500;
+
+async function fetchOnce(
+  path: string,
+  options: RequestInit,
+  headers: Record<string, string>
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(`${API_BASE}${path}`, { ...options, headers, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (!API_BASE) {
@@ -44,17 +62,26 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   };
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const retriable = !options.method || options.method === "GET";
   let res: Response;
-  try {
-    res = await fetch(`${API_BASE}${path}`, { ...options, headers, signal: controller.signal });
-  } catch (e: any) {
-    throw e?.name === "AbortError"
-      ? new ApiTimeoutError("সার্ভার থেকে উত্তর পেতে সময় বেশি লাগছে। আবার চেষ্টা করুন।")
-      : new ApiNetworkError("সংযোগ ব্যর্থ হয়েছে। ইন্টারনেট সংযোগ চেক করুন।");
-  } finally {
-    clearTimeout(timer);
+
+  for (let attempt = 0; ; attempt++) {
+    let timedOut = false;
+    try {
+      res = await fetchOnce(path, options, headers);
+    } catch (e: any) {
+      timedOut = e?.name === "AbortError";
+      // Both timeouts and generic network failures are safe to retry for
+      // idempotent GET requests — a cold start usually succeeds on retry.
+      if (retriable && attempt < MAX_RETRIES) {
+        await new Promise((done) => setTimeout(done, RETRY_DELAY_MS * (attempt + 1)));
+        continue;
+      }
+      throw timedOut
+        ? new ApiTimeoutError("সার্ভার থেকে উত্তর পেতে সময় বেশি লাগছে। আবার চেষ্টা করুন।")
+        : new ApiNetworkError("সংযোগ ব্যর্থ হয়েছে। ইন্টারনেট সংযোগ চেক করুন।");
+    }
+    break;
   }
 
   if (res.status === 401) {

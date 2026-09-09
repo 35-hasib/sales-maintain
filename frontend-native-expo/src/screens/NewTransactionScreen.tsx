@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { View, Text, ScrollView, StyleSheet, Alert } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { api } from "../lib/api";
-import { getDealers } from "../lib/cache";
+import { getDealers, invalidateDashboard } from "../lib/cache";
 import type { Dealer } from "../lib/types";
 import { Card, Button, Field, Input, Textarea, ErrorText, PickerSelect, Footer } from "../components/Themed";
 import PhotoPicker from "../components/PhotoPicker";
@@ -34,6 +34,7 @@ export default function NewTransactionScreen() {
         productDescription: productDescription || null,
         transactionDate, photos,
       });
+      invalidateDashboard();
       nav.replace("TransactionDetail", { id: t.transaction.id });
     } catch (err: any) { setError(err?.message || "লেনদেন তৈরি করা যায়নি"); }
     finally { setBusy(false); }

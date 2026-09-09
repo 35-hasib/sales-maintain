@@ -3,7 +3,7 @@ import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRoute } from "@react-navigation/native";
 import { api } from "../lib/api";
-import { getDealers } from "../lib/cache";
+import { getDealers, invalidateDashboard } from "../lib/cache";
 import { formatTaka, formatDate } from "../lib/format";
 import type { Summary, Dealer } from "../lib/types";
 import { Card, CardTitle, StatusBadge, Button, Field, Input, Textarea, ErrorText, PickerSelect, SheetModal, Footer, C } from "../components/Themed";
@@ -85,6 +85,7 @@ export default function TransactionDetailScreen() {
       if (date) args[dateKey] = date;
       const res = await api.post<{ warning?: string }>(path, args);
       if (res?.warning) Alert.alert("সতর্কতা", res.warning);
+      invalidateDashboard();
       setMode(null); await load();
     } catch (e: any) { setFormError(e?.message || "রেকর্ড করা যায়নি"); }
     finally { setBusy(false); }
@@ -100,6 +101,7 @@ export default function TransactionDetailScreen() {
       await api.put(`/api/transactions/${id}`, {
         sellerDealerId, buyerDealerId, totalAmount, productDescription: productDescription || null, transactionDate: date, photos,
       });
+      invalidateDashboard();
       setMode(null); await load();
     } catch (e: any) { setFormError(e?.message || "আপডেট করা যায়নি"); }
     finally { setBusy(false); }
@@ -116,6 +118,7 @@ export default function TransactionDetailScreen() {
       const args: Record<string, unknown> = { amount, paymentMethod, note: note || null, photos };
       if (date) args[dateKey] = date;
       await api.put(path, args);
+      invalidateDashboard();
       setMode(null); await load();
     } catch (e: any) { setFormError(e?.message || "আপডেট করা যায়নি"); }
     finally { setBusy(false); }

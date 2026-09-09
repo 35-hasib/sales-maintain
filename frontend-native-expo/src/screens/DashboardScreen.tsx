@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator
 import { MaterialIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { api } from "../lib/api";
+import { getDashboard } from "../lib/cache";
 import { formatTaka, formatDate } from "../lib/format";
 import type { Summary, LedgerEntry } from "../lib/types";
 import { Card, CardTitle, StatusBadge, Button, SheetModal, Footer } from "../components/Themed";
@@ -48,7 +49,7 @@ export default function DashboardScreen() {
   const [breakdownError, setBreakdownError] = useState("");
 
   useEffect(() => {
-    api.get<DashboardData>("/api/dashboard").then(setData).catch((e) => setError(e.message));
+    getDashboard<DashboardData>().then(setData).catch((e) => setError(e.message));
   }, []);
 
   const openBreakdown = useCallback((type: BreakdownType) => {

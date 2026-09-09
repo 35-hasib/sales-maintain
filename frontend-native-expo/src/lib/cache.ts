@@ -43,7 +43,7 @@ export function invalidate(key: string) {
 
 export function clearAppCache() {
   mem.clear();
-  AsyncStorage.multiRemove(["salesmaintain_dealers"]).catch(() => {});
+  AsyncStorage.multiRemove(["salesmaintain_dealers", "salesmaintain_dashboard"]).catch(() => {});
 }
 
 const DEALERS_KEY = "salesmaintain_dealers";
@@ -58,4 +58,15 @@ export function getDealers(): Promise<Dealer[]> {
 
 export function invalidateDealers() {
   invalidate(DEALERS_KEY);
+}
+
+const DASHBOARD_KEY = "salesmaintain_dashboard";
+const DASHBOARD_TTL = 30_000;
+
+export function getDashboard<T>(): Promise<T> {
+  return getCached<T>(DASHBOARD_KEY, DASHBOARD_TTL, () => api.get<T>("/api/dashboard"));
+}
+
+export function invalidateDashboard() {
+  invalidate(DASHBOARD_KEY);
 }
