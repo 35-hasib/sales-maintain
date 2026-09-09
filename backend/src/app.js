@@ -16,14 +16,16 @@ export function createApp() {
   app.use(cors({ origin: (process.env.CORS_ORIGIN || "").split(",").filter(Boolean) }));
   app.use(express.json());
 
-  app.get("/health", async (_req, res) => {
+  const health = async (_req, res) => {
     try {
       await prisma.$queryRaw`SELECT 1`;
       res.json({ ok: true });
     } catch (err) {
       res.status(500).json({ ok: false, error: "db unreachable" });
     }
-  });
+  };
+
+  app.get(["/health", "/api/health"], health);
 
   app.use("/api/auth", authRoutes);
   app.use("/api/dealers", dealerRoutes);
